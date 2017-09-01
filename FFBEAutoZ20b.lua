@@ -25,7 +25,7 @@ parts of smartbattle_choose which handle Arena skill selection with that code.
 --]]
 
 
-ver = "ffbeAuto Z20a"
+ver = "ffbeAuto Z20b"
 ALver = "0"															-- AnkuLua version string
 ALpro = true														-- is this AnkuLua a Pro and not trial?
 
