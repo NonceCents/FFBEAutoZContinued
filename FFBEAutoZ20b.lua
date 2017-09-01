@@ -34,6 +34,28 @@ Settings:setScriptDimension(true, 600)
 setImmersiveMode(true)
 Settings:set("MinSimilarity", 0.8)
 
+--WISHLIST ITEM; SKIP VERSION CHECK VARIABLE
+
+--[[
+--THIS CODE PROVIDED BY seebadoris, SEE https://github.com/seebadoris/BEFF
+commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
+
+--- This checks the version number on github to see if an update is needed, then downloads the newest files ---
+getNewestVersion = loadstring(httpGet("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua"))
+latestVersion = getNewestVersion()
+currentVersion = dofile(localPath .."version.lua")
+print (currentVersion)
+print (latestVersion)
+if currentVersion == latestVersion then
+	toast ("You are running the most current version!")
+else
+	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
+	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
+	httpDownload("https://raw.githubusercontent.com/seebadoris/BEFF/master/imageupdater.lua", localPath .."imageupdater.lua")
+	scriptExit("Updated!")
+end
+--]]
+
 exploration = Pattern("exploration.png"):similar(0.5)
 autobtn = Pattern("auto.png"):similar(0.9)
 autoonbtn = Pattern("AutoOn.png"):similar(0.8)
@@ -227,6 +249,10 @@ dr = {center:offset(diff,diff)}
 aRatio = 1
 step_mode = 1									-- LEGACY options
 trace_mode = 1									-- LEGACY options
+
+if (height >= width) then aRatio = (height / width) / 1.6					-- Aspect ratio correction from 960 height 600 width which is 1.6 ratio
+else aRatio = (width / height) / 1.6
+end
 
 top = Location(300,150)
 bottom = Location(300,750)
@@ -2499,10 +2525,10 @@ function defineSBreg()
 
 	usePreviousSnap(false)
 
-	if (debug_mode) then
-		for i=1, 6 do
-			unitreg[i]:highlight(0.2)
-		end
+
+	for i=1, 6 do
+		unitreg[i] = Region(unitreg[i]:getX(),unitreg[i]:getY()*aRatio,unitreg[i]:getW(),unitreg[i]:getH()*aRatio)
+		if (debug_mode) then unitreg[i]:highlight(0.5) end
 	end
 
 	--if (bottom_reg:exists(IsReady,lagx/3)) then --Old version
@@ -3693,10 +3719,6 @@ if(battle_mode == 2) then use_esper_battle = true end
 if(battle_mode == 4) then use_repeat_battle = true end
 if(comp_mode == 2) then use_bonus_unit = true end
 if(comp_mode == 3) then use_highest_atk_companion = true end
-
-if (height >= width) then aRatio = (height / width) / 1.6					-- Aspect ratio correction from 960 height 600 width which is 1.6 ratio
-else aRatio = (width / height) / 1.6
-end
 
 while true do
 	if(farmloc == "chain_helper") then
