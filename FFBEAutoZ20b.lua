@@ -8,17 +8,15 @@
 
 --[[
 KNOWN ISSUES:
-Arena Auto-Battle broken
-On certain resolutions, sb_region is high enough to include unit's current MP in upper-right, causing mis-reads during auto-skill selection.
-	- May attempt to match bottom of Esper icon to define top of sb_reg, and top of Auto button to define bottom. Possible fallback to current method if match == nil
+Arena Auto-Battle broken - 9/3 - Should be fixed now, awaiting feedback!
+Chain Helper manual mode is broken
 
 NonceCents' TO DO LIST:
--Define sbreg between Arena bouts since team members may have been disabled on first turn.
 -Test Arena Enemy First Strike function for reliability - Update 9/1: Testing looks good, high reliability at native resolution, need to test other resolutions
 -Fix broken Auto-Arena battle. Smartbattle_companion's skill selection is working well, possibly replace the relevant
 parts of smartbattle_choose which handle Arena skill selection with that code.
 -Add manual option for chain helper.
--Test in other resolutions, work on aRatio .. Update 9/1; improvements made to sb_reg definition, tested in 760.1280, need to test other resolutions
+-Test in other resolutions, work on aRatio .. Update 9/3; improvements made to sb_reg definition, tested in multiple resolutions, awaiting user feedback
 -Add Dualcast support
 -Add targeted cast support
 -Add smartbattle functionality to Explorations (probably a "mob battle" and Boss Battle" type of option.
@@ -243,7 +241,7 @@ use_smart_battle_boss_companion_2nd = true
 use_smart_battle_boss_companion_2nd_damage = "Single Target"
 use_smart_battle_boss_companion_2nd_mp = 30
 use_smart_battle_custom_cast_times = false
-damage_methods = {"Any", "Area", "Single Target"}
+damage_methods = {"Any Attack", "Any AoE Attack", "Any Single-Target Attack"}
 halt_on_gameover = false
 goldcheck_success = false						-- Has gold check ever successful?
 leave_after_boss = false						-- Exploration value - leave after boss instead of continuing.
@@ -340,6 +338,8 @@ arena_skillcast = {}
 arena_skilluse_enemy = {}
 arena_skillmp_enemy = {}
 arena_skillcast_enemy = {}
+arena_autoskilluse = "Any AoE Attack"
+--arena_autoskillmp = 28  --This is now an option defined by a text box
 
 sb_skilluse = {}										-- Skills to use in first stage of battle
 sb_skillmp = {}											-- MP match
@@ -1458,12 +1458,17 @@ function arena()
 			end
 		elseif (func_state == 1 ) then
 			if (exists(arena_ratio)) then
-				findRatio = findAllNoFindException(arena_ratio)
-				dragDrop(bottom,top)
-				dragDrop(bottom,top)
-				dragDrop(bottom,top)
-				wait(lagx*0.2+0.3)
-				click(findRatio[#findRatio])
+				if (ratio_choice == "High") then
+					findRatio = findAllNoFindException(arena_ratio)
+					click(findRatio[1])
+				else
+					dragDrop(bottom,top)
+					dragDrop(bottom,top)
+					dragDrop(bottom,top)
+					wait(lagx*0.2+0.3)
+					findRatio = findAllNoFindException(arena_ratio)
+					click(findRatio[#findRatio])
+				end
 				func_state = 2
 			end
 		elseif (func_state == 2 ) then
@@ -2161,8 +2166,12 @@ function smartBattle_choose(skilluse, skillmp)
 	for i, r in pairs(sb_regunit) do
 		if (i ~= 6) then
 			if (debug_mode) then sb_regunit[i]:highlight(0.2) end
-			if (skilluse[i] == "None") then
-
+			if (skilluse[i] == "None") then --Does nothing if no skill selected
+			elseif (skilluse[i] == "Any Attack" or skilluse[i] == "Any AoE Attack" or skilluse[i] == "Any Single-Target Attack") then
+				smartBattle_auto(skilluse[i],skillmp[i],i)
+				wait(0.2+lagx*0.25)
+			--NonceCents: Disabled this block of code; smartBattle_Companion has been renamed smartBattle_auto and is taking over this functionality.
+			--[[
 			--This section looks for an appropriate skill if "Any Attack" or "Any AoE Attack" was specified by the user
 			elseif (skilluse[i] == "Any Attack" or skilluse[i] == "Any AoE Attack") then
 				selectionmp = 0
@@ -2287,8 +2296,9 @@ function smartBattle_choose(skilluse, skillmp)
 				--elseif (not sb_reg:exists(IsReady, lagx*0.75)) then -- no unit is ready, turn is over or team is dead
 				--	return false --return false to indicate skill selection did not make it through all units
 				end
+			--]]
 
-			--Below handles if a specific skill was set by the user (NOT "Any Attack" or "Any AoE Attack")
+			--Below handles if a specific skill & MP value needs to be searched for
 			--elseif (sb_regunit[i]:exists(IsReady,lagx*0.75)) then --Old Version
 			elseif (existsIsReady(sb_regunit[i],lagx*0.75)) then
 				skillToUse = sb_skills[skilluse[i]]
@@ -2309,6 +2319,8 @@ function smartBattle_choose(skilluse, skillmp)
 					elseif (skillTries > 6) then
 						--if (debug_mode) then runlog("Exists Click Back",true,debug.getinfo(1).currentline) end
 						if (existsClick(BackButton, 0)) then wait(0.25+lagx*0.35) ; break end
+
+					--Skill icon we're looking for is present
 					elseif (sb_reg:exists(skillToUse, 0)) then
 						usePreviousSnap(true)
 						findSkills = regionFindAllNoFindException(sb_reg,skillToUse)
@@ -2328,11 +2340,23 @@ function smartBattle_choose(skilluse, skillmp)
 							if (retval and mp == skillmp[i]) then
 								click(m)
 								skillSuccess = true
+							--[[
 								if (skilluse[i] == "Resist" or skilluse[i] == "Cheer" or skilluse[i] == "Cure" or skilluse[i] == "Buff" or skilluse[i] == "Sing" or skilluse[i] == "Dance" or skilluse[i] == "Elements" or skilluse[i] == "Cover (Noctis)") then
 									wait(0.05+lagx*0.5)
-									-- ALWAYS self click to be safe from cure/buff/sing skills etc.
 									click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
 									wait(0.2+lagx*0.25)
+								end
+							--]]
+								wait(0.2+lagx*0.25)
+								-- If a glowing selection option is covering up the unit's ready marker, it'll self-click the unit to cast any AoE team spell
+								-- Otherwise, if the unit shows ready but there's a back button, we probably clicked a Raise or something bad. It'll click Back twice.
+								if (not existsIsReady(sb_regunit[i],0)) then
+									click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
+									wait(0.2+lagx*0.25)
+								elseif (existsIsReady(sb_regunit[i],0) and existsClickL(BackButton, 0)) then
+									wait(lagx/2)
+									existsClickL(BackButton, 0)
+									skillSuccess = false
 								end
 								--if(skillcast[i]) then click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2))) end
 								wait(0.2+lagx*0.25)
@@ -2340,11 +2364,23 @@ function smartBattle_choose(skilluse, skillmp)
 							elseif (retval and (skillmp[i] == mp)) then
 								click(m)
 								skillSuccess = true
-								if (skilluse[i] == "Resist" or skilluse[i] == "Cheer" or skilluse[i] == "Cure" or skilluse[i] == "Buff" or skilluse[i] == "Sing" or skilluse[i] == "Dance" or skilluse[i] == "Elements" or skilluse[i] == "Cover (Noctis)") then
-									wait(0.05+lagx*0.5)
-									-- ALWAYS self click to be safe from cure/buff/sing skills etc.
+								--[[
+                                    if (skilluse[i] == "Resist" or skilluse[i] == "Cheer" or skilluse[i] == "Cure" or skilluse[i] == "Buff" or skilluse[i] == "Sing" or skilluse[i] == "Dance" or skilluse[i] == "Elements" or skilluse[i] == "Cover (Noctis)") then
+                                        wait(0.05+lagx*0.5)
+                                        click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
+                                        wait(0.2+lagx*0.25)
+                                    end
+                                --]]
+								wait(0.2+lagx*0.25)
+								-- If a glowing selection option is covering up the unit's ready marker, it'll self-click the unit to cast any AoE team spell
+								-- Otherwise, if the unit shows ready but there's a back button, we probably clicked a Raise or something bad. It'll click Back twice.
+								if (not existsIsReady(sb_regunit[i],0)) then
 									click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
 									wait(0.2+lagx*0.25)
+								elseif (existsIsReady(sb_regunit[i],0) and existsClickL(BackButton, 0)) then
+									wait(lagx/2)
+									existsClickL(BackButton, 0)
+									skillSuccess = false
 								end
 								--if(skillcast[i]) then click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2))) end
 								wait(0.2+lagx*0.25)
@@ -2352,14 +2388,17 @@ function smartBattle_choose(skilluse, skillmp)
 							end
 						end
 
+						--Skill found on the screen wasn't the one we were looking for, scrolls onward
 						if (not skillSuccess) then
 							if (debug_mode) then runlog("Skill find #"..skillTries.." not successful.",true,debug.getinfo(1).currentline) end
-							dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) )
+							--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) )
+							dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
 							wait(0.1+lagx*0.15)
 							usePreviousSnap(false)
 							skillTries = skillTries + 1
 						end
 
+					--Skill we were looking for isn't present, scrolls onward
 					else
 						if (debug_mode) then runlog("Skill find #"..skillTries.." not successful.",true,debug.getinfo(1).currentline) end
 						--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) )
@@ -2369,10 +2408,7 @@ function smartBattle_choose(skilluse, skillmp)
 						skillTries = skillTries + 1
 					end
 				end -- end of while loop looking for skills
-
-			--elseif (not sb_reg:exists(IsReady, lagx*0.75)) then --no units are ready, turn is over or team is dead
-			--	return false -- return false to indicate skill selection did not make it thorugh all units
-			end -- end of main if/elseifs checking whether skills are Any AoE Attack or player-defined
+			end -- end of main if/elseifs unit has a skill to use and is ready
 		end
 	end --end of for loop iterating through units
 
@@ -2389,17 +2425,23 @@ end
 -- Needs to have regions defined first
 -- Just select based on minimum MP. Finds first skill with more than x MP. Then check if it's a Raise or not damage.
 
-function smartBattle_companion(skillmp, damage)
+-- 9/3: NonceCents: I've made this a general function for all auto-skill selection, and disabled the auto-skill-selection parts of smartBattle_choose
+-- Note that this function differs from smartBattle_choose in that it takes a single value and operates on a single unit
+function smartBattle_auto(skilluse,skillmp, unit)
 	local selection = nil
 	local selectionmp = 0
 	local checkValue = 0				-- add all MPs found in a formula and if it's the same then quit (we reached the end of the skill list)
 	local checkValue_last = 12345
 	local retval = false
 	local mp = 0
-	local i = 6
+	local i = unit
 
-	if (companion_used == false) then return true end 
-	
+	while(sb_reg == nil) do
+		defineSBreg()
+	end
+
+	-- NonceCents: Expanded this function to handle all automatic skill selection; companion state check no longer necessary
+	--if (companion_used == false) then return true end
 
 	if (debug_mode) then sb_regunit[i]:highlight(0.2) end
 	
@@ -2444,20 +2486,21 @@ function smartBattle_companion(skillmp, damage)
 						if (icon_reg:exists(SB_Raise,0)) then                    -- Skills to NEVER use, i.e Raise type.
 							if (debug_mode) then runlog("Exists Raise",true) end														
 						elseif (not smartBattle_isNotAttackIcon(icon_reg)) then
-							for t=1,#SB_Damage do 
+							for t=1,#SB_Damage do
+
 								if(text_reg:exists(SB_Damage[t],0) and mp > selectionmp) then 
-									if (damage == "Any") then
+									if (skilluse == "Any Attack") then
 										if(debug_mode) then runlog("Any Damage - Select this.", true) end
 										selection = text_reg:getLastMatch()
 										selectionmp = mp
 										skillSuccess = true
 										break
-									elseif(damage == "Area" and smartBattle_isAoE(text_reg)) then
+									elseif(skilluse == "Any AoE Attack" and smartBattle_isAoE(text_reg)) then
 										if(debug_mode) then runlog("Area Damage - Select this.", true) end
 										selection = text_reg:getLastMatch()
 										selectionmp = mp
 										skillSuccess = true
-									elseif(damage == "Single Target" and not smartBattle_isAoE(text_reg)) then
+									elseif(skilluse == "Any Single-Target Attack" and not smartBattle_isAoE(text_reg)) then
 										if(debug_mode) then runlog("Single Target Damage - Select this.", true) end
 										selection = text_reg:getLastMatch()
 										selectionmp = mp
@@ -2473,10 +2516,24 @@ function smartBattle_companion(skillmp, damage)
 
 				if (skillSuccess) then 
 					click(selection)
+					--[[
+                        if (skilluse[i] == "Resist" or skilluse[i] == "Cheer" or skilluse[i] == "Cure" or skilluse[i] == "Buff" or skilluse[i] == "Sing" or skilluse[i] == "Dance" or skilluse[i] == "Elements" or skilluse[i] == "Cover (Noctis)") then
+                            wait(0.05+lagx*0.5)
+                            click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
+                            wait(0.2+lagx*0.25)
+                        end
+                    --]]
 					wait(0.2+lagx*0.25)
-					-- ALWAYS self click to be safe from cure/buff/sing skills etc.
-					click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
-					wait(0.05+lagx*0.05)
+					-- If a glowing selection option is covering up the unit's ready marker, it'll self-click the unit to cast any AoE team spell
+					-- Otherwise, if the unit shows ready but there's a back button, we probably clicked a Raise or something bad. It'll click Back twice.
+					if (not existsIsReady(sb_regunit[i],0)) then
+						click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
+						wait(0.2+lagx*0.25)
+					elseif (existsIsReady(sb_regunit[i],0) and existsClickL(BackButton, 0)) then
+						wait(lagx/2)
+						existsClickL(BackButton, 0)
+						skillSuccess = false
+					end
 					break 
 				elseif (skillTries > 6 or checkValue == checkValue_last) then
 					if (debug_mode) then runlog("Exists Click Back",true,debug.getinfo(1).currentline) end
@@ -2484,7 +2541,8 @@ function smartBattle_companion(skillmp, damage)
 					if (existsClick(BackButton, 0)) then wait(0.25+lagx*0.35) ; break end 
 				else
 					if (debug_mode) then runlog("Found not successful.",true,debug.getinfo(1).currentline) end
-					dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) ) 
+					--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) )
+					dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
 					wait(0.1+lagx*0.15)
 					usePreviousSnap(false)
 					skillTries = skillTries + 1
@@ -2492,7 +2550,8 @@ function smartBattle_companion(skillmp, damage)
 				checkValue_last = checkValue
 			else
 				if (debug_mode) then runlog("Not found.",true,debug.getinfo(1).currentline) end
-				dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) ) 
+				--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) )
+				dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
 				wait(0.1+lagx*0.15)
 				usePreviousSnap(false)
 				skillTries = skillTries + 1
@@ -2700,8 +2759,8 @@ function smartBattle()
 				smartBattle_choose(sb_skilluse, sb_skillmp)
 				wait(0.05+lagx*0.05)
 				if(use_smart_battle_companion) then
-					smartBattle_companion(use_smart_battle_companion_mp,use_smart_battle_companion_damage)
-					wait(0.05+lagx*0.05)
+					smartBattle_auto(use_smart_battle_companion_damage,use_smart_battle_companion_mp,6)
+					wait(0.2+lagx*0.25)
 				end
 				if (use_smart_battle_custom_cast_times) then 
 					skillCast(sb_skillcast)
@@ -2722,8 +2781,8 @@ function smartBattle()
 						smartBattle_choose(sb_skilluse, sb_skillmp)
 						wait(0.05+lagx*0.05)
 						if(use_smart_battle_companion) then
-							smartBattle_companion(use_smart_battle_companion_mp,use_smart_battle_companion_damage)
-							wait(0.05+lagx*0.05)
+							smartBattle_auto(use_smart_battle_companion_damage,use_smart_battle_companion_mp,6)
+							wait(0.2+lagx*0.25)
 						end
 						skillCast(sb_skillcast)
 					else
@@ -2737,8 +2796,8 @@ function smartBattle()
 				smartBattle_choose(sb_skilluse2, sb_skillmp2)
 				wait(0.05+lagx*0.05)
 				if(use_smart_battle_companion_2nd) then
-					smartBattle_companion(use_smart_battle_companion_2nd_mp,use_smart_battle_companion_2nd_damage)
-					wait(0.05+lagx*0.05)
+					smartBattle_auto(use_smart_battle_companion_2nd_damage,use_smart_battle_companion_2nd_mp,6)
+					wait(0.2+lagx*0.25)
 				end
 				if (use_smart_battle_custom_cast_times) then 
 					skillCast(sb_skillcast2)
@@ -2758,8 +2817,8 @@ function smartBattle()
 						smartBattle_choose(sb_skilluse2, sb_skillmp2)
 						wait(0.05+lagx*0.05)
 						if(use_smart_battle_companion_2nd) then
-							smartBattle_companion(use_smart_battle_companion_2nd_mp,use_smart_battle_companion_2nd_damage)
-							wait(0.05+lagx*0.05)
+							smartBattle_auto(use_smart_battle_companion_2nd_damage,use_smart_battle_companion_2nd_mp,6)
+							wait(0.2+lagx*0.25)
 						end
 						skillCast(sb_skillcast2)
 					else
@@ -2774,8 +2833,8 @@ function smartBattle()
 				smartBattle_choose(sb_skilluse_boss, sb_skillmp_boss)
 				wait(0.05+lagx*0.05)
 				if(use_smart_battle_boss_companion) then
-					smartBattle_companion(use_smart_battle_boss_companion_mp,use_smart_battle_boss_companion_damage)
-					wait(0.05+lagx*0.05)
+					smartBattle_auto(use_smart_battle_boss_companion_damage,use_smart_battle_boss_companion_mp,6)
+					wait(0.2+lagx*0.25)
 				end
 				if (use_smart_battle_custom_cast_times) then 
 					skillCast(sb_skillcast_boss)
@@ -2795,8 +2854,8 @@ function smartBattle()
 				smartBattle_choose(sb_skilluse_boss2, sb_skillmp_boss2)
 				wait(0.05+lagx*0.05)
 				if(use_smart_battle_boss_companion_2nd) then
-					smartBattle_companion(use_smart_battle_boss_companion_2nd_mp,use_smart_battle_boss_companion_2nd_damage)
-					wait(0.05+lagx*0.05)
+					smartBattle_auto(use_smart_battle_boss_companion_2nd_damage,use_smart_battle_boss_companion_2nd_mp,6)
+					wait(0.2+lagx*0.25)
 				end
 				if (use_smart_battle_custom_cast_times) then 
 					skillCast(sb_skillcast_boss2)
@@ -2814,8 +2873,8 @@ function smartBattle()
 					smartBattle_choose(sb_skilluse_boss2, sb_skillmp_boss2)
 					wait(0.05+lagx*0.05)
 					if(use_smart_battle_boss_companion_2nd) then
-						smartBattle_companion(use_smart_battle_boss_companion_2nd_mp,use_smart_battle_boss_companion_2nd_damage)
-						wait(0.05+lagx*0.05)
+						smartBattle_auto(use_smart_battle_boss_companion_2nd_damage,use_smart_battle_boss_companion_2nd_mp,6)
+						wait(0.2+lagx*0.25)
 					end
 					skillCast(sb_skillcast_boss2)
 				elseif (use_smart_battle_custom_cast_times and not use_smart_battle_boss_2nd) then
@@ -2823,8 +2882,8 @@ function smartBattle()
 					smartBattle_choose(sb_skilluse_boss, sb_skillmp_boss)
 					wait(0.05+lagx*0.05)
 					if(use_smart_battle_boss_companion) then
-						smartBattle_companion(use_smart_battle_boss_companion_mp,use_smart_battle_boss_companion_damage)
-						wait(0.05+lagx*0.05)
+						smartBattle_auto(use_smart_battle_boss_companion_damage,use_smart_battle_boss_companion_mp,6)
+						wait(0.2+lagx*0.25)
 					end
 					skillCast(sb_skillcast_boss)
 				else
@@ -2857,6 +2916,8 @@ function smartBattle_arena()
 	local iterations = 0
 	local enemy_first = false
 
+
+
 	usePreviousSnap(false)
 
 	--handles optionally using separate set of skills if enemy strikes first
@@ -2882,10 +2943,9 @@ function smartBattle_arena()
 				wait(0.1)
 				if (arena_mode) then
 					for i, r in pairs(sb_regunit) do
-						arena_skilluse[i] = "Any AoE Attack"
-						arena_skillmp[i] = 28
+						smartBattle_auto(arena_autoskilluse,arena_autoskillmp,i)
+						wait(0.2+lagx*0.25)
 					end
-					smartBattle_choose(arena_skilluse, arena_skillmp)
 					state = 99
 				elseif (enemy_first) then
 					if (use_arena_enemyfirst_battle) then
@@ -2905,9 +2965,11 @@ function smartBattle_arena()
 			elseif(state == 1) then
 				wait(0.1)
 				if (arena_mode) then
+					arena_autoskilluse = "Any Attack"
+					arena_autoskillmp = math.random(10,24)
 					for i, r in pairs(sb_regunit) do
-						arena_skilluse[i] = "Any Attack"
-						arena_skillmp[i] = math.random(10,24)
+						smartBattle_auto(arena_autoskilluse,arena_autoskillmp,i)
+						wait(0.2+lagx*0.25)
 					end
 				else
 					smartBattle_choose(arena_skilluse, arena_skillmp)
@@ -3367,7 +3429,8 @@ else
 end
 
 farmList = {}
-chainoptions = {"Manual Select","All Ready Units"}
+chainoptions = {"Manual Select","All Ready Units" }
+ratio_options = {"High","Low"}
 
 dialogInit()
 addTextView("")
@@ -3472,10 +3535,16 @@ if(script_function == 1) then
 	newRow()
 	addTextView("")
 	newRow()
+	addTextView("Find Opponents with ")
+	addSpinner("ratio_choice",ratio_options,ratio_options[1])
+	addTextView("Ratio.")
+	newRow()
+	addTextView("")
+	newRow()
 	addTextView("Battle method:")
 	newRow()
 	addRadioGroup("battle_mode", 1)
-	addRadioButton("Auto-select skills - THIS IS CURRENTLY BROKEN, WILL BE FIXED SOON.", 1)
+	addRadioButton("Auto-select Skills", 1)
 	addRadioButton("Press Repeat", 4)
 	addRadioButton("Custom Skill Selection", 3)
 	newRow()
@@ -3779,6 +3848,18 @@ while true do
 		ese_speed(farmloc)
 	elseif (farmloc == "arena") then
 		if(battle_mode == 1) then arena_mode = true
+			dialogInit()
+			newRow()
+			addTextView("")
+			newRow()
+			addTextView("AoE Abilities with a minimum of ")
+			addEditNumber("arena_autoskillmp",28)
+			addTextView(" MP will be selected.")
+			--WHEN DUALCAST SUPPORT IS ADDED, OPTION TO SEARCH FOR IT SHOULD BE ADDED HERE
+			newRow()
+			addTextView("")
+			newRow()
+			dialogShow("Arena Auto-Battle Min MP")
 		elseif(battlemode == 3) then use_smart_battle = true
 		elseif(battlemode == 4) then use_repeat_battle = true end
 		arena()
