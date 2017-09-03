@@ -12,11 +12,8 @@ Arena Auto-Battle broken - 9/3 - Should be fixed now, awaiting feedback!
 Chain Helper manual mode is broken
 
 NonceCents' TO DO LIST:
--Test Arena Enemy First Strike function for reliability - Update 9/1: Testing looks good, high reliability at native resolution, need to test other resolutions
--Fix broken Auto-Arena battle. Smartbattle_companion's skill selection is working well, possibly replace the relevant
-parts of smartbattle_choose which handle Arena skill selection with that code.
--Add manual option for chain helper.
 -Test in other resolutions, work on aRatio .. Update 9/3; improvements made to sb_reg definition, tested in multiple resolutions, awaiting user feedback
+-Add Cast LB when Ready option
 -Add Dualcast support
 -Add targeted cast support
 -Add smartbattle functionality to Explorations (probably a "mob battle" and Boss Battle" type of option.
@@ -273,10 +270,13 @@ bottom = Location(300,750*aRatio)
 rain = {Pattern("rain_up.png"):similar(0.9),Pattern("rain_down.png"):similar(0.9),Pattern("rain_left.png"):similar(0.9),Pattern("rain_right.png"):similar(0.9),
 		Pattern("rain_ul.png"):similar(0.9),Pattern("rain_ur.png"):similar(0.9),Pattern("rain_dl.png"):similar(0.9),Pattern("rain_dr.png"):similar(0.9)}
 
+sb_autoskills = {"None","Any Attack","Any AoE Attack","Any Single-Target Attack"}
+--sb_autoskills ["None"] = false
+--sb_autoskills ["Any Attack"] = Pattern("SB_Sword.png")
+--sb_autoskills ["Any AoE Attack"] = Pattern("SB_Sword.png")
+--sb_autoskills ["Any Single-Target Attack"] = Pattern("SB_Sword.png")
+
 sb_skills = {}
-sb_skills["None"] = false
-sb_skills["Any Attack"] = Pattern("SB_Sword.png")
-sb_skills["Any AoE Attack"] = Pattern("SB_Sword.png")
 sb_skills["Katana"] = Pattern("SB_Sword.png")
 sb_skills["Sword"] = Pattern("SB_Break.png")
 sb_skills["Blast"] = Pattern("SB_Blast.png"):similar(0.7)
@@ -394,7 +394,7 @@ explorefarm["invincible_interior_exploration"] = Pattern("invincible_interior_ex
 
 custom = {} -- for custom path name
 explorePath = {}
-explorePath["earth_shrine_exploration"] ="bosscheck,30|up,2500|findmove|down,1|left,4000|right,3|up,5000|right,6000|down,1|right,4000|left,3|down,3750|right,1000|down,500|left,500|up,500|left,1000|up,9000|down,1|right,1000|up,1000|left,500|up,1|left,500|up,1|left,1|up,3750|down,3750|right,1000|down,2000|up,1|left,5750|right,6|up,4000|left,800|down,600,collect3|up,600|right,3|up,2500"
+explorePath["earth_shrine_exploration"] = "bosscheck,30|up,2500|findmove|down,1|left,4000|right,3|up,5000|right,6000|down,1|right,4000|left,3|down,3750|right,1000|down,500|left,500|up,500|left,1000|up,9000|down,1|right,1000|up,1000|left,500|up,1|left,500|up,1|left,1|up,3750|down,3750|right,1000|down,2000|up,1|left,5750|right,6|up,4000|left,800|down,600,collect3|up,600|right,3|up,2500"
 explorePath["phantom_forest_exploration"] = "left,1|findmove|left,3000|down,1000|left,3000|right,2|up,2000|left,1000|up,2000|right,2500|up,1500|down,1500|left,2500|right,1|battle,ud,700,up|up,3000|right,3000|up,2000|right,3000|up,2000|left,2500|up,500|right,2000|down,500|right,500|down,2000|left,3000|down,2500|left,3000|down,1000|left,2000|up,2000|left,3000|down,4000|left,500|down,2500|left,1500|right,1|up,2000|right,2000|up,5000|right,500|up,4000|right,2000|up,500|left,4000|down,500|left,8000"
 explorePath["fulan_pass_exploration"] = "up,2000|left,2500|up,1000|left,5|up,3000|right,1|left,1|down,3000|left,1500|up,1500|left,1500|up,3000|right,3000|up,2500|left,1000|up,500|left,2500|up,3000|left,1500|right,1500|down,3000|right,3000|down,2|right,3000|up,2000|right,3500|up,2000|left,3000|up,2000|left,1|up,3000|right,3500|up,5000|down,2|right,2000|up,3000|left,4000|right,4000|down,3000|left,5000|up,500|left,1000|down,500|left,1000|down,2000|left,3500|up,1500|left,1500|up,6000"
 explorePath["maranda_coast_exploration"] = "bosscheck,35|down,500|findmove|down,8000|up,13|left,5000|down,1000|right,10|up,3500,collect1|left,500|down,5000|up,7|battle,lr,2900,left|left,10000|up,4000|left,4000|up,2000,collect2|down,2000|up,2|left,3000|left,4000,zone2|findmove|down,500,collect3|right,4000|left,2|down,3000|left,500|down,3000|left,1000|up,1000|left,4000|right,2|up,2000|left,15|down,3000|left,1500|up,2000|left,1000,collect4|right,2000|up,3000|battle,lr,7300,left|left,8000|up,3000|right,1500|up,2000|right,1500|up,1000|right,2000|down,500,collect5|left,2000|down,1500|left,3000|right,3|up,6000"
@@ -1993,9 +1993,9 @@ function endTurn(forcebutton)
 	-- If Repeat button specified to be used clicks it, then looks for any units that may not have performed an ability and clicks on them
 	elseif((forcebutton == "repeatbtn" or (forcebutton == nil and use_repeat_battle)) and existsClickL(repeatbtn,lagx/4)) then
 		if(debug_mode) then runlog("Repeat : ") end
-		wait(lagx/4)
+		--wait(lagx/4)
 		--while (existsClick(IsReady,lagx*0.75)) do wait(0.25+lagx*0.35) end --Old version
-		while (existsClickIsReady(sb_reg,lagx*0.75)) do wait(0.25+lagx*0.35) end
+		while (existsClickIsReady(bottom_reg,lagx/4)) do wait(0.25+lagx*0.35) end
 		wait(lagx*0.5)
 		return true
 
@@ -2348,17 +2348,18 @@ function smartBattle_choose(skilluse, skillmp)
 								end
 							--]]
 								wait(0.2+lagx*0.25)
+								usePreviousSnap(false)
 								-- If a glowing selection option is covering up the unit's ready marker, it'll self-click the unit to cast any AoE team spell
-								-- Otherwise, if the unit shows ready but there's a back button, we probably clicked a Raise or something bad. It'll click Back twice.
-								if (not existsIsReady(sb_regunit[i],0)) then
+								-- Otherwise, if the unit shows ready but there's a back button, a buff / raise may have been selected.
+								-- Will attempt to self-click, but if this doesn't work, it will click the Back button.
+								if (not existsIsReady(sb_regunit[i],0) and existsL(BackButton, 0)) then
 									click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
 									wait(0.2+lagx*0.25)
-								elseif (existsIsReady(sb_regunit[i],0) and existsClickL(BackButton, 0)) then
+								elseif (existsL(BackButton, 0)) then
+									click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
 									wait(lagx/2)
-									existsClickL(BackButton, 0)
-									skillSuccess = false
+									while(existsClickL(BackButton, 0)) do wait(lagx/2) end
 								end
-								--if(skillcast[i]) then click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2))) end
 								wait(0.2+lagx*0.25)
 								break
 							elseif (retval and (skillmp[i] == mp)) then
@@ -2372,17 +2373,18 @@ function smartBattle_choose(skilluse, skillmp)
                                     end
                                 --]]
 								wait(0.2+lagx*0.25)
+								usePreviousSnap(false)
 								-- If a glowing selection option is covering up the unit's ready marker, it'll self-click the unit to cast any AoE team spell
-								-- Otherwise, if the unit shows ready but there's a back button, we probably clicked a Raise or something bad. It'll click Back twice.
-								if (not existsIsReady(sb_regunit[i],0)) then
+								-- Otherwise, if the unit shows ready but there's a back button, a buff / raise may have been selected.
+								-- Will attempt to self-click, but if this doesn't work, it will click the Back button.
+								if (not existsIsReady(sb_regunit[i],0) and existsL(BackButton, 0)) then
 									click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
 									wait(0.2+lagx*0.25)
-								elseif (existsIsReady(sb_regunit[i],0) and existsClickL(BackButton, 0)) then
+								elseif (existsL(BackButton, 0)) then
+									click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
 									wait(lagx/2)
-									existsClickL(BackButton, 0)
-									skillSuccess = false
+									while(existsClickL(BackButton, 0)) do wait(lagx/2) end
 								end
-								--if(skillcast[i]) then click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2))) end
 								wait(0.2+lagx*0.25)
 								break
 							end
@@ -2392,7 +2394,8 @@ function smartBattle_choose(skilluse, skillmp)
 						if (not skillSuccess) then
 							if (debug_mode) then runlog("Skill find #"..skillTries.." not successful.",true,debug.getinfo(1).currentline) end
 							--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) )
-							dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
+							--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
+							dragDrop(Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+(sb_reg:getH()*0.865) ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY() ) )
 							wait(0.1+lagx*0.15)
 							usePreviousSnap(false)
 							skillTries = skillTries + 1
@@ -2402,7 +2405,8 @@ function smartBattle_choose(skilluse, skillmp)
 					else
 						if (debug_mode) then runlog("Skill find #"..skillTries.." not successful.",true,debug.getinfo(1).currentline) end
 						--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) )
-						dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
+						--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
+						dragDrop(Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+(sb_reg:getH()*0.865) ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY() ) )
 						wait(0.1+lagx*0.15)
 						usePreviousSnap(false)
 						skillTries = skillTries + 1
@@ -2524,16 +2528,19 @@ function smartBattle_auto(skilluse,skillmp, unit)
                         end
                     --]]
 					wait(0.2+lagx*0.25)
+					usePreviousSnap(false)
 					-- If a glowing selection option is covering up the unit's ready marker, it'll self-click the unit to cast any AoE team spell
-					-- Otherwise, if the unit shows ready but there's a back button, we probably clicked a Raise or something bad. It'll click Back twice.
-					if (not existsIsReady(sb_regunit[i],0)) then
+					-- Otherwise, if the unit shows ready but there's a back button, a buff / raise may have been selected.
+					-- Will attempt to self-click, but if this doesn't work, it will click the Back button.
+					if (not existsIsReady(sb_regunit[i],0) and existsL(BackButton, 0)) then
 						click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
 						wait(0.2+lagx*0.25)
-					elseif (existsIsReady(sb_regunit[i],0) and existsClickL(BackButton, 0)) then
+					elseif (existsL(BackButton, 0)) then
+						click(Location(sb_regunit[i]:getX() + sb_regunit[i]:getW()/2, sb_regunit[i]:getY() + (sb_regunit[i]:getH()/2)))
 						wait(lagx/2)
-						existsClickL(BackButton, 0)
-						skillSuccess = false
+						while(existsClickL(BackButton, 0)) do wait(lagx/2) end
 					end
+					wait(0.2+lagx*0.25)
 					break 
 				elseif (skillTries > 6 or checkValue == checkValue_last) then
 					if (debug_mode) then runlog("Exists Click Back",true,debug.getinfo(1).currentline) end
@@ -2542,7 +2549,8 @@ function smartBattle_auto(skilluse,skillmp, unit)
 				else
 					if (debug_mode) then runlog("Found not successful.",true,debug.getinfo(1).currentline) end
 					--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) )
-					dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
+					--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
+					dragDrop(Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+(sb_reg:getH()*0.865) ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY() ) )
 					wait(0.1+lagx*0.15)
 					usePreviousSnap(false)
 					skillTries = skillTries + 1
@@ -2551,7 +2559,8 @@ function smartBattle_auto(skilluse,skillmp, unit)
 			else
 				if (debug_mode) then runlog("Not found.",true,debug.getinfo(1).currentline) end
 				--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+sb_reg:getH()-33-51 ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+25+50 ) )
-				dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
+				--dragDrop(Location(sb_reg:getX()+sb_reg:getW()/2 , 855*aRatio) , Location( sb_reg:getX()+sb_reg:getW()/2 , 555*aRatio) )
+				dragDrop(Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY()+(sb_reg:getH()*0.865) ) , Location( sb_reg:getX()+sb_reg:getW()/2 , sb_reg:getY() ) )
 				wait(0.1+lagx*0.15)
 				usePreviousSnap(false)
 				skillTries = skillTries + 1
@@ -3123,15 +3132,23 @@ end
 -- AnkuLua remembers unique spinner variables between sessions, and token is used to differentiate them.
 
 function cbattlemenu(skilltable, mptable, casttable, titletype, token)
+
 	skillsList = {}
+
+	for i,v in ipairs(sb_autoskills) do
+		skillsList[#skillsList+1] = v
+	end
 
 	for i,v in pairsByKeys(sb_skills) do
 		skillsList[#skillsList+1] = i
 	end
 
 	dialogInit()
-	addTextView("Set unit skill icons and MP usage below : ")
+	addTextView(" Set unit skill icons and MP usage below : ")
 	newRow()
+	addTextView(" \"Any\"-type ability selection will use the minimum MP specified.")
+	newRow()
+	addTextView(" Explicitly-defined abilities will match the MP specified.")
 	newRow()
 	if (ALver >= "6.8.0") then
 		newRow()
@@ -3142,10 +3159,10 @@ function cbattlemenu(skilltable, mptable, casttable, titletype, token)
 		newRow()
 		newRow()
 	end
-	addTextView("Battle Actions : ")
+	addTextView(" Battle Actions : ")
 	newRow()
 	newRow()
-	addTextView("Unit 1 :")
+	addTextView(" Unit 1 :")
 	addSpinner("skill1"..token,skillsList,"None")
 	addTextView("MP :")
 	addEditNumber("mp1"..token,0)
@@ -3153,10 +3170,10 @@ function cbattlemenu(skilltable, mptable, casttable, titletype, token)
 		addTextView("\tCast Frame Delay: ")
 		addEditNumber("cast1"..token,0)
 	else
-		addTextView("\tUsing Auto and Repeat.")
+		addTextView("\tUsing Auto & Repeat")
 	end
 	newRow()
-	addTextView("Unit 2 :")
+	addTextView(" Unit 2 :")
 	addSpinner("skill2"..token,skillsList,"None")
 	addTextView("MP :")
 	addEditNumber("mp2"..token,0)
@@ -3164,10 +3181,10 @@ function cbattlemenu(skilltable, mptable, casttable, titletype, token)
 		addTextView("\tCast Frame Delay: ")
 		addEditNumber("cast2"..token,0)
 	else
-		addTextView("\tUsing Auto and Repeat.")
+		addTextView("\tUsing Auto & Repeat")
 	end
 	newRow()
-	addTextView("Unit 3 :")
+	addTextView(" Unit 3 :")
 	addSpinner("skill3"..token,skillsList,"None")
 	addTextView("MP :")
 	addEditNumber("mp3"..token,0)
@@ -3175,10 +3192,10 @@ function cbattlemenu(skilltable, mptable, casttable, titletype, token)
 		addTextView("\tCast Frame Delay: ")
 		addEditNumber("cast3"..token,0)
 	else
-		addTextView("\tUsing Auto and Repeat.")
+		addTextView("\tUsing Auto & Repeat")
 	end
 	newRow()
-	addTextView("Unit 4 :")
+	addTextView(" Unit 4 :")
 	addSpinner("skill4"..token,skillsList,"None")
 	addTextView("MP :")
 	addEditNumber("mp4"..token,0)
@@ -3186,10 +3203,10 @@ function cbattlemenu(skilltable, mptable, casttable, titletype, token)
 		addTextView("\tCast Frame Delay: ")
 		addEditNumber("cast4"..token,0)
 	else
-		addTextView("\tUsing Auto and Repeat.")
+		addTextView("\tUsing Auto & Repeat")
 	end
 	newRow()
-	addTextView("Unit 5 :")
+	addTextView(" Unit 5 :")
 	addSpinner("skill5"..token,skillsList,"None")
 	addTextView("MP :")
 	addEditNumber("mp5"..token,0)
@@ -3197,11 +3214,11 @@ function cbattlemenu(skilltable, mptable, casttable, titletype, token)
 		addTextView("\tCast Frame Delay: ")
 		addEditNumber("cast5"..token,0)
 	else
-		addTextView("\tUsing Auto and Repeat.")
+		addTextView("\tUsing Auto & Repeat")
 	end
 	if(use_smart_battle_companion and token == "a") then
 		newRow()
-		addTextView("Companion :")
+		addTextView(" Companion :")
 		addSpinner("use_smart_battle_companion_damage", damage_methods, damage_methods[2])
 		addTextView("\tMin MP : ")
 		addEditNumber("use_smart_battle_companion_mp",10)
@@ -3209,7 +3226,7 @@ function cbattlemenu(skilltable, mptable, casttable, titletype, token)
 			addTextView("\tCast Frame Delay: ")
 			addEditNumber("cast6"..token,0)
 		else
-			addTextView("\tUsing Auto and Repeat.")
+			addTextView("\tUsing Auto & Repeat")
 		end
 	elseif(use_smart_battle_companion_2nd and token == "b") then
 		newRow()
@@ -3423,7 +3440,7 @@ end
 ALver, ALpro = getALVer()
 
 if(ALver >= "6.9.0") then
-	setButtonPosition(0,0)
+	setButtonPosition(0,30*aRatio)
 else
 	toast("Old version of AnkuLua detected.")
 end
@@ -3567,11 +3584,28 @@ if(script_function == 1) then
 
 	if(refill) then lapisConfirm() end
 
+	if(battle_mode == 1) then
+		dialogInit()
+		newRow()
+		addTextView("")
+		newRow()
+		addTextView("AoE Abilities with a minimum of ")
+		addEditNumber("arena_autoskillmp",28)
+		addTextView(" MP will be selected.")
+		--WHEN DUALCAST SUPPORT IS ADDED, OPTION TO SEARCH FOR IT SHOULD BE ADDED HERE
+		newRow()
+		addTextView("")
+		newRow()
+		dialogShow("Arena Auto-Battle Min MP")
+	end
+
 --Displays Dungeon Farm Options
 elseif(script_function == 2) then
 
+	farmList[1] = "dungeon_finder"
+
 	for i,v in pairsByKeys(dungeonfarm) do
-		farmList[#farmList+1] = i
+		if (i ~= "dungeon_finder") then farmList[#farmList+1] = i end
 	end
 
 	dialogInit()
@@ -3623,9 +3657,12 @@ elseif(script_function == 2) then
 --Displays Exploration Farm Options
 elseif(script_function == 3) then
 
+	farmList[1] = "free_farm"
+
 	for i,v in pairsByKeys(explorefarm) do
-		farmList[#farmList+1] = i
+		if (i ~= "free_farm") then farmList[#farmList+1] = i end
 	end
+
 	for i,v in pairsByKeys(custom) do
 		farmList[#farmList+1] = v
 	end
@@ -3848,18 +3885,6 @@ while true do
 		ese_speed(farmloc)
 	elseif (farmloc == "arena") then
 		if(battle_mode == 1) then arena_mode = true
-			dialogInit()
-			newRow()
-			addTextView("")
-			newRow()
-			addTextView("AoE Abilities with a minimum of ")
-			addEditNumber("arena_autoskillmp",28)
-			addTextView(" MP will be selected.")
-			--WHEN DUALCAST SUPPORT IS ADDED, OPTION TO SEARCH FOR IT SHOULD BE ADDED HERE
-			newRow()
-			addTextView("")
-			newRow()
-			dialogShow("Arena Auto-Battle Min MP")
 		elseif(battlemode == 3) then use_smart_battle = true
 		elseif(battlemode == 4) then use_repeat_battle = true end
 		arena()
