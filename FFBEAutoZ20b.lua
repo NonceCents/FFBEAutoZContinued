@@ -5,13 +5,20 @@
 -- http://ankulua.boards.net/thread/167/brave-exvius-ffbeauto-farming-explorations
 -- now at http://ankulua.boards.net/thread/589/ffbeauto-continued-farming-chaining-arena
 
+
 --[[
+KNOWN ISSUES:
+Arena Auto-Battle broken
+On certain resolutions, sb_region is high enough to include unit's current MP in upper-right, causing mis-reads during auto-skill selection.
+	- May attempt to match bottom of Esper icon to define top of sb_reg, and top of Auto button to define bottom. Possible fallback to current method if match == nil
+
 NonceCents' TO DO LIST:
--Test Arena Enemy First Strike function for reliability
+-Define sbreg between Arena bouts since team members may have been disabled on first turn.
+-Test Arena Enemy First Strike function for reliability - Update 9/1: Testing looks good, high reliability at native resolution, need to test other resolutions
 -Fix broken Auto-Arena battle. Smartbattle_companion's skill selection is working well, possibly replace the relevant
 parts of smartbattle_choose which handle Arena skill selection with that code.
 -Add manual option for chain helper.
--Test in other resolutions, work on aRatio
+-Test in other resolutions, work on aRatio .. Update 9/1; improvements made to sb_reg definition, tested in 760.1280, need to test other resolutions
 -Add Dualcast support
 -Add targeted cast support
 -Add smartbattle functionality to Explorations (probably a "mob battle" and Boss Battle" type of option.
@@ -56,6 +63,7 @@ else
 end
 --]]
 
+healthbar = Pattern("healthbar.png")
 exploration = Pattern("exploration.png"):similar(0.5)
 autobtn = Pattern("auto.png"):similar(0.9)
 autoonbtn = Pattern("AutoOn.png"):similar(0.8)
@@ -131,25 +139,64 @@ arena_entryyes = Pattern("arena_entryyes.png")
 arena_enemyfirst = Pattern("arena_enemyfirst.png")
 use_arena_enemyfirst_battle = false
 
+aRatio = 1
+
+screen = getAppUsableScreenSize()
+--screen = getRealScreenSize()
+width = screen:getX(); height = screen:getY()
+
+if (height >= width) then aRatio = (height / width) / 1.6					-- Aspect ratio correction from 960 height 600 width which is 1.6 ratio
+else aRatio = (width / height) / 1.6
+end
+
+
+left_reg = Region(0,0,300,960*aRatio)
+right_reg = Region(300,0,600,960*aRatio)
+top_reg = Region(0,0,600,480*aRatio)
+bottom_reg = Region(0,480*aRatio,600,600*aRatio)
+control_reg = Region(0,550*aRatio,600,520*aRatio)
+
+debug_reg = Region(40,0,495,35*aRatio)					-- region to which the script writes debug texts.
+r_x = width/4; r_y = height/4; r_w = width/2; r_h = height/2
+mid_reg = Region(r_x,r_y,r_w,r_h)
+center = Location(300,480*aRatio)
+diff = width/2.5
+
+step_mode = 1									-- LEGACY options
+trace_mode = 1									-- LEGACY options
+
 buttonreg = { }									-- universal table for button regions learning
 buttonreg_learned = { }							-- boolean to set if button is learned. Useful if you want to set button regions manually first then let the script refine it
+unitreg = {}
+
+--NonceCents: Below are manually-defined button regions, depreciated in favor of defining the sb_reg first and then slicing it up into unit regions with maths
+
+--[[
+unitreg[1] = Region(5,555,295,108)
+unitreg[2] = Region(5,664,295,108)
+unitreg[3] = Region(5,772,295,108)
+unitreg[4] = Region(300,555,295,108)
+unitreg[5] = Region(300,664,295,108)
+unitreg[6] = Region(300,772,295,108)
+--]]
 
 -- Manually set regions
-buttonreg[results_big] = Region(120,30,360,320) -- two locations for results big. Do not learn.
-buttonreg[revive] = Region(50,80,495,435)
-buttonreg[giveup] = Region(50,80,495,435)
-buttonreg[closebtn] = Region(10,225,580,550) -- closebtn multiple locations. Do not learn.
-buttonreg[connection_error] = Region(30,340,545,320)
-buttonreg[connect_ok] = Region(30,340,545,320)
-buttonreg[no_request] = Region(5,635,290,165)
-buttonreg[esperfilled] = Region(540,440,60,180)
-buttonreg[yesbtn] = Region(5,80,590,760)		-- yesbtn is used in multiple locations. Do not learn.
-buttonreg[text_continue] = Region(5,80,590,760)		-- text_continue is used in multiple locations. Do not learn.
-buttonreg[boss] = Region(0,40,300,440)
-buttonreg[battle_transition] = Region(350,80,250,360)
-buttonreg[arena_resultsok1] = Region(60,80,480,980)		-- OK is used in multiple locations. Do not learn.
-buttonreg[arena_resultsok2] = Region(60,80,480,980)		
-buttonreg[arena_resultsok3] = Region(60,80,480,980)		
+-- NonceCents 9/2: Recently added Aspect Ratio correction to all of these; keep an eye on things to ensure proper resolution support
+buttonreg[results_big] = Region(120,30*aRatio,360,320*aRatio) -- two locations for results big. Do not learn.
+buttonreg[revive] = Region(50,80*aRatio,495,435*aRatio)
+buttonreg[giveup] = Region(50,80*aRatio,495,435*aRatio)
+buttonreg[closebtn] = Region(10,225*aRatio,580,550*aRatio) -- closebtn multiple locations. Do not learn.
+buttonreg[connection_error] = Region(30,340*aRatio,545,320*aRatio)
+buttonreg[connect_ok] = Region(30,340*aRatio,545,320*aRatio)
+buttonreg[no_request] = Region(5,635*aRatio,290,165*aRatio)
+buttonreg[esperfilled] = Region(540,440*aRatio,60,180*aRatio)
+buttonreg[yesbtn] = Region(5,80*aRatio,590,760*aRatio)		-- yesbtn is used in multiple locations. Do not learn.
+buttonreg[text_continue] = Region(5,80*aRatio,590,760*aRatio)		-- text_continue is used in multiple locations. Do not learn.
+buttonreg[boss] = Region(0,40*aRatio,300,440*aRatio)
+buttonreg[battle_transition] = Region(350,80*aRatio,250,360*aRatio)
+buttonreg[arena_resultsok1] = Region(60,80*aRatio,480,980*aRatio)		-- OK is used in multiple locations. Do not learn.
+buttonreg[arena_resultsok2] = Region(60,80*aRatio,480,980*aRatio)
+buttonreg[arena_resultsok3] = Region(60,80*aRatio,480,980*aRatio)
 
 -- Set fixed buttons
 buttonreg_learned[results_big] = true
@@ -212,29 +259,6 @@ battle_counter = 0								-- Battle counter in explorations including farming.
 move_counter = 0								-- Total move counter in explorations not including farming.
 enable_bosscheck_counter = 16					-- When to enable bosscheck on explorations, will be adjusted automatically after a successful run
 bosses_encountered = 0							-- When, if, there are explorations with multiple bosses.
-screen = getAppUsableScreenSize()
-width = screen:getX(); height = screen:getY()
-left_reg = Region(0,0,300,1200)
-right_reg = Region(300,0,600,1200)
-top_reg = Region(0,0,600,480)
-bottom_reg = Region(0,480,600,600)
-control_reg = Region(0,550,600,520)
-
-debug_reg = Region(40,0,495,35)					-- region to which the script writes debug texts.
-r_x = width/4; r_y = height/4; r_w = width/2; r_h = height/2
-mid_reg = Region(r_x,r_y,r_w,r_h)
-center = Location(300,480)
-diff = width/2.5
-
---NonceCents: Manually defined unit regions to aid in determining which position a found unit exists within
-unitreg = {}
-unitreg[1] = Region(5,555,295,108)
-unitreg[2] = Region(5,664,295,108)
-unitreg[3] = Region(5,772,295,108)
-unitreg[4] = Region(300,555,295,108)
-unitreg[5] = Region(300,664,295,108)
-unitreg[6] = Region(300,772,295,108)
-
 
 
 up = {center:offset(0,-(height/3))}
@@ -246,16 +270,8 @@ ur = {center:offset(diff,-diff)}
 dl = {center:offset(-diff,diff)}
 dr = {center:offset(diff,diff)}
 
-aRatio = 1
-step_mode = 1									-- LEGACY options
-trace_mode = 1									-- LEGACY options
-
-if (height >= width) then aRatio = (height / width) / 1.6					-- Aspect ratio correction from 960 height 600 width which is 1.6 ratio
-else aRatio = (width / height) / 1.6
-end
-
-top = Location(300,150)
-bottom = Location(300,750)
+top = Location(300,150*aRatio)
+bottom = Location(300,750*aRatio)
 rain = {Pattern("rain_up.png"):similar(0.9),Pattern("rain_down.png"):similar(0.9),Pattern("rain_left.png"):similar(0.9),Pattern("rain_right.png"):similar(0.9),
 		Pattern("rain_ul.png"):similar(0.9),Pattern("rain_ur.png"):similar(0.9),Pattern("rain_dl.png"):similar(0.9),Pattern("rain_dr.png"):similar(0.9)}
 
@@ -2514,27 +2530,56 @@ end
 -- Define Regions first
 
 function defineSBreg()
-	local rX = 99999
-	local rY = 99999
-	local rX2 = 0
-	local rY2 = 0
+
+	--local rX = 99999
+	--local rY = 99999
+	--local rX2 = 0
+	--local rY2 = 0
 	local foundLeftUnits = 0
 	local foundRightUnits = 0
 	local findLeftUnit = {}
 	local findRightUnit = {}
+	local upperBound
+	local lowerBound
 
 	usePreviousSnap(false)
 
-
-	for i=1, 6 do
-		unitreg[i] = Region(unitreg[i]:getX(),unitreg[i]:getY()*aRatio,unitreg[i]:getW(),unitreg[i]:getH()*aRatio)
-		if (debug_mode) then unitreg[i]:highlight(0.5) end
-	end
+	if (existsClickL(BackButton, 0)) then wait(lagx/2) end
 
 	--if (bottom_reg:exists(IsReady,lagx/3)) then --Old version
 	if (existsIsReady(bottom_reg,lagx/3)) then
+
+		--Attempts to define the smartbattle region by using the bottom of the healthbar base and the top of one of the bottom buttons as boundaries
+		if (existsL(healthbar, 0)) then upperBound = getLastMatch():getY()+getLastMatch():getH() end
+		if (existsL(autobtn, 0) or existsL(menuinbattle, 0) or existsL(autoonbtn, 0) or existsL(repeatbtn, 0)) then lowerBound = getLastMatch():getY()-20 end
+
+		--If the boundaries were found, sets sb_reg accordingly.
+		if (upperBound ~= nil and lowerBound ~= nil) then
+			sb_reg = Region(0,upperBound,600,(lowerBound-upperBound))
+
+		--If not, then it uses a hard-coded value with an aspect-ratio adjustment that should work at most resolutions
+		else
+			sb_reg = Region(0,550*aRatio,600,350*aRatio)
+		end
+
+		if (debug_mode) then sb_reg:highlight(1) end
+
+		-- Defines the areas where the units "should" be.
+		-- Ready units that are actually found are compared against these to find out which number/position they are.
+		unitreg[1] = Region(sb_reg:getX(), sb_reg:getY(), sb_reg:getW()/2, sb_reg:getH()/3)
+		unitreg[2] = Region(sb_reg:getX(), sb_reg:getY()+sb_reg:getH()/3, sb_reg:getW()/2, sb_reg:getH()/3)
+		unitreg[3] = Region(sb_reg:getX(), sb_reg:getY()+sb_reg:getH()*2/3, sb_reg:getW()/2, sb_reg:getH()/3)
+		unitreg[4] = Region(sb_reg:getW()/2, sb_reg:getY(), sb_reg:getW()/2, sb_reg:getH()/3)
+		unitreg[5] = Region(sb_reg:getW()/2, sb_reg:getY()+sb_reg:getH()/3, sb_reg:getW()/2, sb_reg:getH()/3)
+		unitreg[6] = Region(sb_reg:getW()/2, sb_reg:getY()+sb_reg:getH()*2/3, sb_reg:getW()/2, sb_reg:getH()/3)
+
+		if (debug_mode) then
+			for i=1, 6 do unitreg[i]:highlight(1) end
+		end
+
 		usePreviousSnap(true)
 
+		-- Iterates through each pattern in the set of IsReady images to see if any units are ready
 		for p=1, #IsReady do
 			if (debug_mode) then left_reg:highlight(0.2) end
 			findLeftUnit[p] = regionFindAllNoFindException(left_reg,IsReady[p])
@@ -2568,6 +2613,7 @@ function defineSBreg()
 			if (foundLeftUnits == 3) then break end
 		end
 
+		-- Iterates through each pattern in the set of IsReady images to see if any units are ready
 		for p=1, #IsReady do
 			if (debug_mode) then right_reg:highlight(0.2) end
 			findRightUnit[p] = regionFindAllNoFindException(right_reg,IsReady[p])
@@ -2605,11 +2651,6 @@ function defineSBreg()
 		sb_regunit_num = foundLeftUnits + foundRightUnits
 		--sb_reg = Region(rX, rY, rX2-rX+263, rY2-rY+(103)) -- NonceCents: Old method that built unit region by finding max and min X values from found units
 		-- Unfortunately it doesn't work right when the function scans a party that is incomplete or already has units that are not ready / KO
-
-		--Trying this for now instead; using hard-coded control_reg, will see if this produces any problems at other resolutions
-		sb_reg = Region(0,530,600,350*aRatio)
-
-		if (debug_mode) then sb_reg:highlight(0.2) end
 
 	end
 	usePreviousSnap(false)
@@ -2846,10 +2887,13 @@ function smartBattle_arena()
 					end
 					smartBattle_choose(arena_skilluse, arena_skillmp)
 					state = 99
-				elseif (use_arena_enemyfirst_battle and enemy_first) then --will select custom skill selection for enemy first strike
-					smartBattle_choose(arena_skilluse_enemy, arena_skillmp_enemy)
-					enemy_first = false
+				elseif (enemy_first) then
+					if (use_arena_enemyfirst_battle) then
+						smartBattle_choose(arena_skilluse_enemy, arena_skillmp_enemy) --will select custom skill selection for enemy first strike
+					end
 					state = 0
+					enemy_first = false
+					sb_reg = nil --Forces sb_reg to be redefined next turn in case any friendly units have recovered
 				else
 					smartBattle_choose(arena_skilluse, arena_skillmp)
 					state = 99
