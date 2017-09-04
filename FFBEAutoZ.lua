@@ -39,21 +39,23 @@ localPath = scriptPath()
 imagePath = (localPath .. "image/")
 updateImageDir = false
 
-commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
+--Don't need this currently.
+--commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
 
 --- This checks the version number on github to see if an update is needed, then downloads the newest files ---
 getNewestVersion = loadstring(httpGet("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua"))
-latestVersion, updateDmageDir = getNewestVersion()
+latestVersion, updateImageDir = getNewestVersion()
 --currentVersion = dofile(localPath .."version.lua")
-print ("Update from version "..currentVersion.." to version "..latestVersion)
+
 if (currentVersion == latestVersion) then
 	toast ("You are running the most current version!")
 else
 	toast ("Updating to version "..latestVersion)
 	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
 	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
+	print ("Updated from version "..currentVersion.." to version "..latestVersion)
 	if (updateImageDir) then
-		toast ("Update requires update of image directory.")
+		toast ("Update requires re-download of image directory. Stand by...")
 		dofile(localPath .."imageupdater.lua")
 		--httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
 		scriptExit("Update Complete!")
@@ -3465,7 +3467,10 @@ ratio_options = {"High","Low"}
 dialogInit()
 addTextView("")
 newRow()
-
+addTextView("Version: currentVersion")
+dialogInit()
+addTextView("")
+newRow()
 -- No longer necessary
 --[[
 for i,v in pairsByKeys(special_farm) do
