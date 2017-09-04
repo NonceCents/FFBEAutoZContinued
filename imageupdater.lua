@@ -1,5 +1,5 @@
 localPath = scriptPath()
-imagePath = (localPath .. "images/")
+imagePath = (localPath .. "image/")
 
 httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/image/wolfsfang_peak_exploration.png", imagePath .."wolfsfang_peak_exploration.png")
 httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/image/yes_btn.png", imagePath .."yes_btn.png")
