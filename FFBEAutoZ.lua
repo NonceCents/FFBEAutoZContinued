@@ -27,30 +27,24 @@ NonceCents' TO DO LIST:
 -Try to take over the world
 --]]
 
---THIS IS DEPRECIATED; version.lua file contains version
---ver = "ffbeAuto Z20"
-ALver = "0"															-- AnkuLua version string
-ALpro = true														-- is this AnkuLua a Pro and not trial?
+currentVersion = "20.0.0"
 
-Settings:setCompareDimension(true, 600)
-Settings:setScriptDimension(true, 600)
-setImmersiveMode(true)
-Settings:set("MinSimilarity", 0.8)
+--Following update code provided by seebadoris.
+--Originally written by paladiex: https://github.com/Paladiex
+--Used with permission.
 
---WISHLIST ITEM; SKIP VERSION CHECK VARIABLE
+--WISHLIST ITEM; SKIP VERSION CHECK VARIABLE OR ALLOW USER TO DISABLE NETWORK SETTINGS WITHOUT IT CRASHING
 
 localPath = scriptPath()
 imagePath = (localPath .. "image/")
---THIS CODE PROVIDED BY seebadoris, SEE https://github.com/seebadoris/BEFF
---Originally written by paladiex; https://github.com/Paladiex
---Used with permission.
+updateImageDir = false
 
 commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
 
 --- This checks the version number on github to see if an update is needed, then downloads the newest files ---
 getNewestVersion = loadstring(httpGet("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua"))
-latestVersion = getNewestVersion()
-currentVersion = dofile(localPath .."version.lua")
+latestVersion, updateDmageDir = getNewestVersion()
+--currentVersion = dofile(localPath .."version.lua")
 print ("Update from version "..currentVersion.." to version "..latestVersion)
 if (currentVersion == latestVersion) then
 	toast ("You are running the most current version!")
@@ -58,11 +52,23 @@ else
 	toast ("Updating to version "..latestVersion)
 	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
 	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
-	toast ("Updating image directory...")
-	dofile(localPath .."imageupdater.lua")
-	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
-	scriptExit("Update Complete!")
+	if (updateImageDir) then
+		toast ("Update requires update of image directory.")
+		dofile(localPath .."imageupdater.lua")
+		--httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
+		scriptExit("Update Complete!")
+	end
+
 end
+
+
+ALver = "0"															-- AnkuLua version string
+ALpro = true														-- is this AnkuLua a Pro and not trial?
+
+Settings:setCompareDimension(true, 600)
+Settings:setScriptDimension(true, 600)
+setImmersiveMode(true)
+Settings:set("MinSimilarity", 0.8)
 
 healthbar = Pattern("healthbar.png")
 exploration = Pattern("exploration.png"):similar(0.5)
