@@ -51,7 +51,7 @@ commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/common
 getNewestVersion = loadstring(httpGet("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua"))
 latestVersion = getNewestVersion()
 currentVersion = dofile(localPath .."version.lua")
-print ("Update from version "..currentVersion.."to version"..latestVersion)
+print ("Update from version "..currentVersion.." to version "..latestVersion)
 if (currentVersion == latestVersion) then
 	toast ("You are running the most current version!")
 else
