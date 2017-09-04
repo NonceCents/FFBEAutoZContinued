@@ -45,26 +45,23 @@ imagePath = (localPath .. "image/")
 --Originally written by paladiex; https://github.com/Paladiex
 --Used with permission.
 
-if(update_check) then
-	commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
+commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
 
-	--- This checks the version number on github to see if an update is needed, then downloads the newest files ---
-	getNewestVersion = loadstring(httpGet("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua"))
-	latestVersion = getNewestVersion()
-	currentVersion = dofile(localPath .."version.lua")
-	print (currentVersion)
-	print (latestVersion)
-	if (currentVersion == latestVersion) then
-		toast ("You are running the most current version!")
-	else
-		toast ("Updating to version "..latestVersion)
-		httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
-		httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
-		httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
-		toast ("Updating image directory...")
-		dofile(localPath .."imageupdater.lua")
-		scriptExit("Updated!")
-	end
+--- This checks the version number on github to see if an update is needed, then downloads the newest files ---
+getNewestVersion = loadstring(httpGet("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua"))
+latestVersion = getNewestVersion()
+currentVersion = dofile(localPath .."version.lua")
+print ("Update from version "..currentVersion.."to version"..latestVersion)
+if (currentVersion == latestVersion) then
+	toast ("You are running the most current version!")
+else
+	toast ("Updating to version "..latestVersion)
+	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
+	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
+	toast ("Updating image directory...")
+	dofile(localPath .."imageupdater.lua")
+	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
+	scriptExit("Update Complete!")
 end
 
 healthbar = Pattern("healthbar.png")
@@ -3542,7 +3539,7 @@ newRow()
 --addEditNumber("max_depart_count",99999)
 --newRow()
 addCheckBox("help_screen", "Show help?", false)
-addCheckBox("update_check", "Update upon next start if a newer version available?", false)
+--addCheckBox("update_check", "Update upon next start if a newer version available?", false)
 
 dialogShow("FFBEAutoZ")
 
