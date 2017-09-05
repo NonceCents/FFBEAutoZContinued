@@ -1,6 +1,6 @@
 -- Final Fantasy Brave Exvius: ffbeAuto -  Farming & Exploration
 -- by tinotk, modded by Sikat, modded further by NonceCents
--- Version 20.0.0
+-- Version 20.0.1
 -- Memu 960x600 120dpi
 -- Nox 960x600 160dpi RECOMMENDED
 -- http://ankulua.boards.net/thread/167/brave-exvius-ffbeauto-farming-explorations
@@ -27,44 +27,53 @@ NonceCents' TO DO LIST:
 -Try to take over the world
 --]]
 
-currentVersion = "20.0.0"
+currentVersion = "20.0.1"
 
---Following update code provided by seebadoris.
---Originally written by paladiex: https://github.com/Paladiex
---Used with permission.
+--Checks to see if user has AnkuLua's Network Functions are enabled
+httpGetAvailable, httpGetResult = pcall(httpGet, "https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua")
 
---WISHLIST ITEM; SKIP VERSION CHECK VARIABLE OR ALLOW USER TO DISABLE NETWORK SETTINGS WITHOUT IT CRASHING
+if (httpGetAvailable) then
 
-localPath = scriptPath()
-imagePath = (localPath .. "image/")
-updateImageDir = false
+	toast("Network Functions enabled; checking for updates...")
+	--Following update code provided by seebadoris.
+	--Originally written by paladiex: https://github.com/Paladiex
+	--Used with permission.
 
---Don't need this currently.
---commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
+	--WISHLIST ITEM; SKIP VERSION CHECK VARIABLE OR ALLOW USER TO DISABLE NETWORK SETTINGS WITHOUT IT CRASHING
 
---- This checks the version number on github to see if an update is needed, then downloads the newest files ---
-getNewestVersion = loadstring(httpGet("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua"))
-latestVersion, updateImageDir = getNewestVersion()
---currentVersion = dofile(localPath .."version.lua")
+	localPath = scriptPath()
+	imagePath = (localPath .. "image/")
+	updateImageDir = false
 
-if (currentVersion == latestVersion) then
-	toast ("You are running the most current version!")
-else
-	toast ("Updating to version "..latestVersion)
-	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
-	httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
-	print ("Updated from version "..currentVersion.." to version "..latestVersion)
-	if (updateImageDir) then
-		toast ("Update requires re-download of image directory. Stand by...")
-		dofile(localPath .."imageupdater.lua")
-		--httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
-		scriptExit("Update Complete!")
+	--Don't need this currently.
+	--commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
+
+	--- This checks the version number on github to see if an update is needed, then downloads the newest files ---
+	getNewestVersion = loadstring(httpGetResult)
+	latestVersion, updateImageDir = getNewestVersion()
+	--currentVersion = dofile(localPath .."version.lua")
+
+	if (currentVersion >= latestVersion) then
+		toast ("You are running the most current version!")
+	else
+		toast ("Updating to version "..latestVersion)
+		httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
+		httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
+		print ("Updated from version "..currentVersion.." to version "..latestVersion)
+		if (updateImageDir) then
+			toast ("Update requires re-download of image directory. Stand by...")
+			dofile(localPath .."imageupdater.lua")
+			--httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
+			scriptExit("Update Complete!")
+		end
 	end
-
+else
+	toast("Unable to check for updates.")
+	toast("Enable Network Functions in AnkuLua settings to allow update checks.")
 end
 
 
-ALver = "0"															-- AnkuLua version string
+	ALver = "0"															-- AnkuLua version string
 ALpro = true														-- is this AnkuLua a Pro and not trial?
 
 Settings:setCompareDimension(true, 600)
@@ -1508,7 +1517,6 @@ function arena()
 		usePreviousSnap(false)
 		connectionCheckNoWait()
 		usePreviousSnap(true)
-		endTurn()
 		existsClickL(arena_won)
 		existsClickL(arena_lost)
 		existsClickL(arena_resultsok1)
@@ -2024,8 +2032,6 @@ function endTurn(forcebutton)
 			end
 		end
 	end
-
-	usePreviousSnap(true)
 end
 
 -- Auto Battle, the standard way in dungeons.
@@ -2937,8 +2943,6 @@ function smartBattle_arena()
 	local iterations = 0
 	local enemy_first = false
 
-
-
 	usePreviousSnap(false)
 
 	--handles optionally using separate set of skills if enemy strikes first
@@ -2965,7 +2969,6 @@ function smartBattle_arena()
 				if (arena_mode) then
 					for i, r in pairs(sb_regunit) do
 						smartBattle_auto(arena_autoskilluse,arena_autoskillmp,i)
-						wait(0.2+lagx*0.25)
 					end
 					state = 99
 				elseif (enemy_first) then
@@ -2974,12 +2977,15 @@ function smartBattle_arena()
 					end
 					state = 0
 					enemy_first = false
-					sb_reg = nil --Forces sb_reg to be redefined next turn in case any friendly units have recovered
+					--sb_reg = nil -- Forces sb_reg to be redefined next turn in case any friendly units have recovered
+					--Had to disable this; I'd assumed that there will be another turn. defineSBreg() doesn't know to check for win conditions etc.
+					--This was causing the script to hang on victory screen as it tried to define sb_reg. Possibly can revisit this idea at a future date.
 				else
 					smartBattle_choose(arena_skilluse, arena_skillmp)
 					state = 99
 				end
 --				state = 1
+				wait(0.2+lagx*0.25)
 				endTurn("autobtn")
 
 			-- This state is currently disabled; single-target attacks are pretty worthless in Arena.
@@ -2990,18 +2996,19 @@ function smartBattle_arena()
 					arena_autoskillmp = math.random(10,24)
 					for i, r in pairs(sb_regunit) do
 						smartBattle_auto(arena_autoskilluse,arena_autoskillmp,i)
-						wait(0.2+lagx*0.25)
 					end
 				else
 					smartBattle_choose(arena_skilluse, arena_skillmp)
 				end
 				state = 99
+				wait(0.2+lagx*0.25)
 				endTurn("autobtn")
 
 			--Later states just press Repeat
 			elseif(state == 99) then
 				usePreviousSnap(true)
 				round = round + 1
+				wait(0.2+lagx*0.25)
 				endTurn("repeatbtn")
 			end
 		end
