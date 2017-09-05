@@ -1,6 +1,5 @@
 -- Final Fantasy Brave Exvius: ffbeAuto -  Farming & Exploration
 -- by tinotk, modded by Sikat, modded further by NonceCents
--- Version 20.0.1
 -- Memu 960x600 120dpi
 -- Nox 960x600 160dpi RECOMMENDED
 -- http://ankulua.boards.net/thread/167/brave-exvius-ffbeauto-farming-explorations
@@ -27,7 +26,7 @@ NonceCents' TO DO LIST:
 -Try to take over the world
 --]]
 
-currentVersion = "20.0.1"
+currentVersion = "20.0.2"
 
 --Checks to see if user has AnkuLua's Network Functions are enabled
 httpGetAvailable, httpGetResult = pcall(httpGet, "https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua")
@@ -64,8 +63,8 @@ if (httpGetAvailable) then
 			toast ("Update requires re-download of image directory. Stand by...")
 			dofile(localPath .."imageupdater.lua")
 			--httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
-			scriptExit("Update Complete!")
 		end
+		scriptExit("Update Complete!")
 	end
 else
 	toast("Unable to check for updates.")
@@ -1973,6 +1972,8 @@ function skillCast(castdelay)
 		--while (existsClick(IsReady,lagx*0.75)) do wait(0.25+lagx*0.35) end -- Old version
 		while (existsClickIsReady(sb_reg,lagx*0.75)) do wait(0.25+lagx*0.35) end
 
+	--The below is no longer necessary with the existsIsReady and existsClickIsReady functions able to see other ready types.
+	--[[
 		--On occasion, a series of units being tapped at the same time happens faster than the game recognizes
 		--this will look for the menu button still existing, no units "ready" (they may have skills queued and not the sword icon)
 		--this will use the endTurn function with the Auto button to address anything left over (including if somehow we entered a menu)
@@ -1980,6 +1981,7 @@ function skillCast(castdelay)
 		if ((existsL(menuinbattle,lagx*0.75) and not existsIsReady(sb_reg,lagx*0.75)) or existsL(BackButton,lagx*0.75)) then
 			endTurn("autobtn")
 		end
+	--]]
 
 		usePreviousSnap(true)
 	else
