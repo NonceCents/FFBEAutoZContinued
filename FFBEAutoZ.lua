@@ -10,12 +10,15 @@ KNOWN ISSUES:
 Devices with a bar on the side (ie Galaxy S7 Edge, Galaxy S8+) have issues due to the extra screen space breaking aspect-ratio calculations
 Devices with very high resolutions and/or unusual aspect ratios may also not function properly.
 
+
 NonceCents' TO DO LIST:
+-Determine why sometimes smartbattle_choose fails for certain skills in certain positions. ex DV Slot 2 Sword 27 no chain Arena fails, DV Slot 4 Sword 27 chain Dungeon suceeds.
 -Test Chain Helper Manual Select in other resolutions. This feature uses hard-coded unit positions for best possible speed, but this could be a problem in higher resolutions.
 -Test in other resolutions, work on aRatio .. Update 9/3; improvements made to sb_reg definition, tested in multiple resolutions, awaiting user feedback
 -Add Cast LB when Ready option
 -Add Dualcast support
 -Add targeted cast support
+-Add multiple-instance of same spell/MP support (ie WoL's Arms Erasers)
 -Add smartbattle functionality to Explorations (probably a "mob battle" and Boss Battle" type of option.
 -Add default team support; will use the 5-dot team indicator to switch to the appropriate team. Add user-entered nickname
 -Make Depart count persistent to function/mode?
@@ -26,40 +29,43 @@ NonceCents' TO DO LIST:
 -Try to take over the world
 --]]
 
-currentVersion = "20.0.2"
+currentVersion = "20.0.4"
+currentImageVersion = "2"
 
---Checks to see if user has AnkuLua's Network Functions are enabled
+patchNotes = "Features:\nAdded patch notes! You probably won't see these though :(\n\nBug Fixes: \nRepeat will now be pressed again if it's been clicked and units are still ready."
+patchNotes = patchNotes.."\nShortened names of auto-selected attack types to save screen space.\nImproved MP value reading in skill selection.\nFixed bug causing hang at some exploration boss battles."
+
+
+--Checks to see if user has AnkuLua's Network Functions enabled
 httpGetAvailable, httpGetResult = pcall(httpGet, "https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua")
 
 if (httpGetAvailable) then
 
 	toast("Network Functions enabled; checking for updates...")
 	--Following update code provided by seebadoris.
-	--Originally written by paladiex: https://github.com/Paladiex
+	--Originally written by Paladiex: https://github.com/Paladiex
 	--Used with permission.
-
-	--WISHLIST ITEM; SKIP VERSION CHECK VARIABLE OR ALLOW USER TO DISABLE NETWORK SETTINGS WITHOUT IT CRASHING
 
 	localPath = scriptPath()
 	imagePath = (localPath .. "image/")
-	updateImageDir = false
 
 	--Don't need this currently.
 	--commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
 
 	--- This checks the version number on github to see if an update is needed, then downloads the newest files ---
 	getNewestVersion = loadstring(httpGetResult)
-	latestVersion, updateImageDir = getNewestVersion()
+	latestVersion, latestImageVersion = getNewestVersion()
 	--currentVersion = dofile(localPath .."version.lua")
 
 	if (currentVersion >= latestVersion) then
 		toast ("You are running the most current version!")
 	else
-		toast ("Updating to version "..latestVersion)
 		httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
-		httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
+		toast ("Updating to version "..latestVersion)
 		print ("Updated from version "..currentVersion.." to version "..latestVersion)
-		if (updateImageDir) then
+		print ("\n"..patchNotes.."\n")
+		if ((currentImageVersion < latestImageVersion)) then
+			httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
 			toast ("Update requires re-download of image directory. Stand by...")
 			dofile(localPath .."imageupdater.lua")
 			--httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
@@ -71,8 +77,7 @@ else
 	toast("Enable Network Functions in AnkuLua settings to allow update checks.")
 end
 
-
-	ALver = "0"															-- AnkuLua version string
+ALver = "0"															-- AnkuLua version string
 ALpro = true														-- is this AnkuLua a Pro and not trial?
 
 Settings:setCompareDimension(true, 600)
@@ -165,6 +170,7 @@ width = screen:getX(); height = screen:getY()
 if (height >= width) then aRatio = (height / width) / 1.6					-- Aspect ratio correction from 960 height 600 width which is 1.6 ratio
 else aRatio = (width / height) / 1.6
 end
+ratioOffset = (aRatio-1)*height
 
 
 left_reg = Region(0,0,300,960*aRatio)
@@ -246,19 +252,19 @@ use_smart_battle_2nd_round = 3
 use_smart_battle_boss = true
 use_smart_battle_boss_2nd = true
 use_smart_battle_companion = true
-use_smart_battle_companion_damage = "Area"
+use_smart_battle_companion_damage = "AoE Attack"
 use_smart_battle_companion_mp = 10
 use_smart_battle_companion_2nd = true
-use_smart_battle_companion_2nd_damage = "Area"
+use_smart_battle_companion_2nd_damage = "AoE Attack"
 use_smart_battle_companion_2nd_mp = 15
 use_smart_battle_boss_companion = true
-use_smart_battle_boss_companion_damage = "Single Target"
+use_smart_battle_boss_companion_damage = "Non-AoE Attack"
 use_smart_battle_boss_companion_mp = 30
 use_smart_battle_boss_companion_2nd = true
-use_smart_battle_boss_companion_2nd_damage = "Single Target"
+use_smart_battle_boss_companion_2nd_damage = "Non-AoE Attack"
 use_smart_battle_boss_companion_2nd_mp = 30
 use_smart_battle_custom_cast_times = false
-damage_methods = {"Any Attack", "Any AoE Attack", "Any Single-Target Attack"}
+damage_methods = {"Any Attack", "AoE Attack", "Non-AoE Attack"}
 halt_on_gameover = false
 goldcheck_success = false						-- Has gold check ever successful?
 leave_after_boss = false						-- Exploration value - leave after boss instead of continuing.
@@ -290,7 +296,7 @@ bottom = Location(300,750*aRatio)
 rain = {Pattern("rain_up.png"):similar(0.9),Pattern("rain_down.png"):similar(0.9),Pattern("rain_left.png"):similar(0.9),Pattern("rain_right.png"):similar(0.9),
 		Pattern("rain_ul.png"):similar(0.9),Pattern("rain_ur.png"):similar(0.9),Pattern("rain_dl.png"):similar(0.9),Pattern("rain_dr.png"):similar(0.9)}
 
-sb_autoskills = {"None","Any Attack","Any AoE Attack","Any Single-Target Attack"}
+sb_autoskills = {"None","Any Attack","AoE Attack","Non-AoE Attack"}
 --sb_autoskills ["None"] = false
 --sb_autoskills ["Any Attack"] = Pattern("SB_Sword.png")
 --sb_autoskills ["Any AoE Attack"] = Pattern("SB_Sword.png")
@@ -358,7 +364,7 @@ arena_skillcast = {}
 arena_skilluse_enemy = {}
 arena_skillmp_enemy = {}
 arena_skillcast_enemy = {}
-arena_autoskilluse = "Any AoE Attack"
+arena_autoskilluse = "AoE Attack"
 --arena_autoskillmp = 28  --This is now an option defined by a text box
 
 sb_skilluse = {}										-- Skills to use in first stage of battle
@@ -417,7 +423,7 @@ explorePath = {}
 explorePath["earth_shrine_exploration"] = "bosscheck,30|up,2500|findmove|down,1|left,4000|right,3|up,5000|right,6000|down,1|right,4000|left,3|down,3750|right,1000|down,500|left,500|up,500|left,1000|up,9000|down,1|right,1000|up,1000|left,500|up,1|left,500|up,1|left,1|up,3750|down,3750|right,1000|down,2000|up,1|left,5750|right,6|up,4000|left,800|down,600,collect3|up,600|right,3|up,2500"
 explorePath["phantom_forest_exploration"] = "left,1|findmove|left,3000|down,1000|left,3000|right,2|up,2000|left,1000|up,2000|right,2500|up,1500|down,1500|left,2500|right,1|battle,ud,700,up|up,3000|right,3000|up,2000|right,3000|up,2000|left,2500|up,500|right,2000|down,500|right,500|down,2000|left,3000|down,2500|left,3000|down,1000|left,2000|up,2000|left,3000|down,4000|left,500|down,2500|left,1500|right,1|up,2000|right,2000|up,5000|right,500|up,4000|right,2000|up,500|left,4000|down,500|left,8000"
 explorePath["fulan_pass_exploration"] = "up,2000|left,2500|up,1000|left,5|up,3000|right,1|left,1|down,3000|left,1500|up,1500|left,1500|up,3000|right,3000|up,2500|left,1000|up,500|left,2500|up,3000|left,1500|right,1500|down,3000|right,3000|down,2|right,3000|up,2000|right,3500|up,2000|left,3000|up,2000|left,1|up,3000|right,3500|up,5000|down,2|right,2000|up,3000|left,4000|right,4000|down,3000|left,5000|up,500|left,1000|down,500|left,1000|down,2000|left,3500|up,1500|left,1500|up,6000"
-explorePath["maranda_coast_exploration"] = "bosscheck,35|down,500|findmove|down,8000|up,13|left,5000|down,1000|right,10|up,3500,collect1|left,500|down,5000|up,7|battle,lr,2900,left|left,10000|up,4000|left,4000|up,2000,collect2|down,2000|up,2|left,3000|left,4000,zone2|findmove|down,500,collect3|right,4000|left,2|down,3000|left,500|down,3000|left,1000|up,1000|left,4000|right,2|up,2000|left,15|down,3000|left,1500|up,2000|left,1000,collect4|right,2000|up,3000|battle,lr,7300,left|left,8000|up,3000|right,1500|up,2000|right,1500|up,1000|right,2000|down,500,collect5|left,2000|down,1500|left,3000|right,3|up,6000"
+explorePath["maranda_coast_exploration"] = "bosscheck,35|down,500|findmove|down,8000|up,13|left,5000|down,1000|right,10|up,3500,collect1|left,500|down,5000|up,7|battle,lr,2900,left|left,10000|up,4000|left,4000|up,2000,collect2|down,2000|up,2|left,3000|left,4000,zone2|findmove|down,500,collect3|right,4000|left,2|down,3000|left,500|down,3000|left,1000|up,1000|left,4000|right,2|up,2000|left,15|down,3000|left,1500|up,2000|left,1000,collect4|right,2000|up,3000|battle,lr,7300,left|left,8000|up,3000,bossbattle|right,1500|up,2000|right,1500|up,1000|right,2000|down,500,collect5|left,2000|down,1500|left,3000|right,3|up,6000"
 explorePath["dalnakya_cavern_harvest_exploration"] = "down,1000|right,1500|up,1000|right,4500|down,1000|right,3500|up,2|left,2000,collect1|down,2|left,3000|up,1000|left,9|down,4000|left,1000|down,2|left,1|down,6,collect2|right,1500|down,2000|left,1000|down,1000|left,1000|down,6|right,2000|up,2|right,3000|up,1000|right,1500,collect3|left,1500|down,2000|left,3000|down,1000|left,2000|down,1500|left,1500|down,2000|left,1500|down,1500|left,1500|down,3000|down,1500,zone2|left,1500|down,1|left,1000,collect4|right,2000|up,3|right,1500|down,1500|right,2000|up,1000|right,1000|up,1500|right,3000,collect5|left,3000|down,1500|left,1000|down,1000|left,2000|down,3000|down,3000,bosszone|down,3000|down,1500|down,1500,extraforboss|right,1500|down,3000|down,2000,3collectzone|up,2|right,1500,collect|left,1|up,2|left,1500|right,1500|down,6000"
 explorePath["orbonne_monastery_vault_exploration"] = "up,1000|findmove|down,1|left,1000,collect1|up,2500|right,1000|up,1000|left,1500|up,2000|up,2000,collect2|down,2000|right,1000|down,500|right,1000|down,500,collect3|up,500|left,5|down,2000|right,2000|down,2000|left,2000|up,1000|left,2000|down,9|left,4|up,2000|left,3000|right,2|up,1500|left,2000|left,2|down,1500|right,1500|up,1500|right,2000|down,1500|right,2000|down,2000|up,1|left,500|down,500|left,500|up,500|left,500|up,500|left,16|down,5000|right,3500|up,2000|down,1|right,3000|down,2000|left,5000,collect5|down,4000|right,6000|right,6000"
 explorePath["wolfsfang_peak_exploration"] = "right,1500|findmove|left,1|findmove|up,1|findmove|up,1|findmove|up,1|findmove|up,1|findmove|up,1|right,6000|up,1000|right,500|up,1500|right,2500|up,1500|left,3000|findmove|right,1|findmove|right,1|findmove|right,1|up,1500|up,500|right,2000|up,5500|left,1500|up,2|left,1500|right,2|up,3000|left,1500|down,1|right,2|up,1000|right,500|down,1|right,2500|down,3500|up,4|battle,lr,1977,right|right,3000|left,2|up,1500|left,5|up,1500|left,2|up,1000|left,1500|up,1|right,1000|up,1|right,1|right,500|up,500|right,2|up,500|left,1|up,1|left,6000|up,1500|right,2000|left,1|up,500|right,1|up,1500|right,1|up,1|right,1|up,1000|left,2|up,1|left,1|up,2000|right,1|up,500|left,1|up,1000|left,3|up,500|right,1000|up,1000|battle,lr,3500,right|right,3000|up,6500"
@@ -440,7 +446,7 @@ function score(target)
 	end
 end
 
-function string:save(filename)
+function string:fsave(filename)
 	local f = io.open(scriptPath()..filename, "a+")
 	f:write(self.."\t"..os.date().."\n")
 	f:close()
@@ -482,11 +488,11 @@ function runlog(str,istxt,linenumber)
 	else
 --		toast(str)
 	end
-	str:save("run.log")
+	str:fsave("run.log")
 end
 
 function getPath(str,pathIndex)
-	str:save("run.log")
+	str:fsave("run.log")
 	if not pathIndex then pathIndex = 1 end
 	local output = {}
 	local temp = str:split("|")
@@ -895,7 +901,7 @@ function checkGold(limit)
 
 			if(gold_reg == nil) then 
 				gold_reg = Region(getLastMatch():getX()+40,getLastMatch():getY()+1,135,41*aRatio)
-				if(debug_mode) then gold_reg:save("gold_reg.png") end
+				--if(debug_mode) then gold_reg:save("gold_reg.png") end
 			else
 				if(debug_mode) then gold_reg:highlight(0.25) end
 				gold, returnval = numberOCRNoFindException(gold_reg,"gil")
@@ -1021,7 +1027,6 @@ function exploreBattle()
 							if (battleChoice("esper")) then break end
 						end
 					end
-
 					endTurn("autobtn")
 				end
 			end
@@ -1453,7 +1458,7 @@ function arena()
 
 		if(existsL(no_nrg) or exists(arena_emptyorbs)) then
 			if(debug_mode) then runlog("Out of energy") end
-			existsClickL(arena_no)
+			--existsClickL(arena_no)
 			if(refill) then
 				toast("Burning lapis..."); if(debug_mode) then runlog("Refill lapis") end
 				existsClickL(refill_lapis,0);
@@ -1770,6 +1775,7 @@ function go(loc,steps)
 					move_counter = move_counter - 1
 					go(loc,steps-math.max(0,i-3))
 				end
+			elseif(debug_mode and move_counter >= enable_bosscheck_counter) then runlog("Checking for Boss...",true)
 			elseif(move_counter >= enable_bosscheck_counter and existsL(sense_hostile,0.4+lagx/2)) then bossBattle()
 			else
 				go(loc,steps-math.max(0,i-2))
@@ -1784,8 +1790,11 @@ function go(loc,steps)
 					dragDrop(center,(_G[loc])[1])
 				end
 				wait(0.1+math.max(0,(lagx-1)/3))
-				if(move_counter >= enable_bosscheck_counter and existsL(sense_hostile,0.4+lagx/2)) then bossBattle()
-				elseif(not findMove() and not (existsL(menu,0))) then exploreBattle() ; if(existsL(revive,0)) then return end end
+				if(debug_mode and move_counter >= enable_bosscheck_counter) then runlog("Checking for Boss...",true)
+				elseif(move_counter >= enable_bosscheck_counter and existsL(sense_hostile,0.4+lagx/2)) then bossBattle()
+				elseif(not findMove() and not (existsL(menu,0))) then exploreBattle()
+					if(existsL(revive,0)) then return end
+				end
 			end
 		end
 	else -- swiping
@@ -1795,7 +1804,8 @@ function go(loc,steps)
 			if(debug_mode) then runlog("Going "..loc.." "..steps.."ms",true) end
 			dragDrop(center,_G[loc][1])
 			wait(0.1+math.max(0,(lagx-1)/5))
-			if(move_counter >= enable_bosscheck_counter and existsL(sense_hostile,0.4+lagx/2)) then bossBattle()
+			if(debug_mode and move_counter >= enable_bosscheck_counter) then runlog("Checking for Boss...",true)
+			elseif(move_counter >= enable_bosscheck_counter and existsL(sense_hostile,0.4+lagx/2)) then bossBattle()
 			elseif(not findMove() and not (existsL(menu,0))) then exploreBattle() ; if(existsL(revive,0)) then return end ; move_counter = move_counter - 1 ; go(loc,steps) end
 		else
 			if (not findMove() and not (existsL(menu,0))) then exploreBattle() ; if(existsL(revive,0)) then return end end
@@ -1807,7 +1817,8 @@ function go(loc,steps)
 					dragDrop(center,(_G[loc])[1])
 				end
 				wait(0.1+math.max(0,(lagx-1)/3))
-				if(move_counter >= enable_bosscheck_counter and existsL(sense_hostile,0.3+lagx/2)) then bossBattle()
+				if(debug_mode and move_counter >= enable_bosscheck_counter) then runlog("Checking for Boss...",true)
+				elseif(move_counter >= enable_bosscheck_counter and existsL(sense_hostile,0.3+lagx/2)) then bossBattle()
 				elseif (not findMove() and not (existsL(menu,0))) then exploreBattle() ; if(existsL(revive,0)) then return end end
 			end
 		end
@@ -1936,6 +1947,7 @@ function skillCast(castdelay)
 	if(farmloc == "chain_helper" and chain_mode == "Manual Select") then
 		for n, r in pairs(castdelay) do
 			unitbuttonloc[n] = Location(unitreg[n]:getX() + unitreg[n]:getW()/2, unitreg[n]:getY() + (unitreg[n]:getH()/2))
+			if (debug_mode) then unitreg[n]:highlight(0.2) end
 		end
 	else
 		--Iterates through the units to prepare tap locations
@@ -2017,7 +2029,11 @@ function endTurn(forcebutton)
 		if(debug_mode) then runlog("Repeat : ") end
 		--wait(lagx/4)
 		--while (existsClick(IsReady,lagx*0.75)) do wait(0.25+lagx*0.35) end --Old version
-		while (existsClickIsReady(bottom_reg,lagx/4)) do wait(0.25+lagx*0.35) end
+		while (existsIsReady(bottom_reg,lagx/4)) do
+			existsClickL(repeatbtn,lagx/4)
+			wait(0.25+lagx*0.35)
+			while(existsClickIsReady(bottom_reg,lagx/4)) do wait(0.25+lagx*0.35) end
+		end
 		wait(lagx*0.5)
 		return true
 
@@ -2168,7 +2184,6 @@ function smartBattle_choose(skilluse, skillmp)
 	local selectionmp = 0
 	local checkValue = 0				-- add all MPs found in a formula and if it's the same then quit (we reached the end of the skill list)
 	local checkValue_last = 12345
-
 	local detectMaxMP = 0
 	local mp = 0
 	local retval = false
@@ -2187,7 +2202,7 @@ function smartBattle_choose(skilluse, skillmp)
 		if (i ~= 6) then
 			if (debug_mode) then sb_regunit[i]:highlight(0.2) end
 			if (skilluse[i] == "None") then --Does nothing if no skill selected
-			elseif (skilluse[i] == "Any Attack" or skilluse[i] == "Any AoE Attack" or skilluse[i] == "Any Single-Target Attack") then
+			elseif (skilluse[i] == "Any Attack" or skilluse[i] == "AoE Attack" or skilluse[i] == "Non-AoE Attack") then
 				smartBattle_auto(skilluse[i],skillmp[i],i)
 				wait(0.2+lagx*0.25)
 			--NonceCents: Disabled this block of code; smartBattle_Companion has been renamed smartBattle_auto and is taking over this functionality.
@@ -2344,18 +2359,26 @@ function smartBattle_choose(skilluse, skillmp)
 					elseif (sb_reg:exists(skillToUse, 0)) then
 						usePreviousSnap(true)
 						findSkills = regionFindAllNoFindException(sb_reg,skillToUse)
+
 						for n, m in ipairs(findSkills) do
 							if (debug_mode) then m:highlight(0.2) end
-							mp_reg = Region(m:getX(), m:getY()+m:getH()*0.8, 60,55*aRatio)
+							mpRef_reg = Region(m:getX()-30, m:getY()+m:getH()*0.8, 60, 55*aRatio)
+							if (debug_mode) then mpRef_reg:highlight(0.2) end
+							if (mpRef_reg:exists(SB_MP, 0)) then
+								mp_reg = Region(mpRef_reg:getLastMatch():getX()+mpRef_reg:getLastMatch():getW()-2, mpRef_reg:getLastMatch():getY()-5, 35, mpRef_reg:getLastMatch():getH()+10)
+								if (debug_mode) then mpRef_reg:getLastMatch():highlight(0.2) end
+								--if(skillmp[i] == "27" or skillmp[i] == "45" or skillmp[i] == "80") then mp_reg:save(skillmp[i]..".png") end
+							else
+								mp_reg = Region(m:getX(), m:getY()+m:getH()*0.8, 60,55*aRatio)
+							end
 							--mp_reg = Region(m:getX(), m:getY()+m:getH(),60,55)
 							if (debug_mode) then mp_reg:highlight(0.2) end
 							mp, retval = numberOCRNoFindException(mp_reg,"mp")
-							--if (not retval or mp ~= skillmp[i]) then
-							--	mp, retval = numberOCRNoFindException(mp_reg,"gil")
-							--end
+							if (not retval or skillmp[i] ~= retval) then
+								mp, retval = numberOCRNoFindException(mp_reg,"2mp")
+							end
 							if (retval and debug_mode) then
 								runlog("MP found : "..mp,true,debug.getinfo(1).currentline)
-								--mp_reg:save(mp..".png")
 							end
 							if (retval and mp == skillmp[i]) then
 								click(m)
@@ -2493,11 +2516,11 @@ function smartBattle_auto(skilluse,skillmp, unit)
 				findSkills = regionFindAllNoFindException(sb_reg,SB_MP)
 				for n, m in ipairs(findSkills) do
 					if (debug_mode) then m:highlight(0.2) end
-					mp_reg = Region(m:getX()+m:getW(), m:getY()-10, 75,m:getH()+20)
+					mp_reg = Region(m:getX()+m:getW()-2, m:getY()-5, 35,m:getH()+10)
 					if (debug_mode) then mp_reg:highlight(0.2) end								
 					mp, retval = numberOCRNoFindException(mp_reg,"mp")
-					if (not retval) then 
-						mp, retval = numberOCRNoFindException(mp_reg,"gil")
+					if (not retval) then
+						mp, retval = numberOCRNoFindException(mp_reg,"2mp")
 					end
 					if (retval and debug_mode) then 
 						runlog("MP found : "..mp,true)
@@ -2519,12 +2542,12 @@ function smartBattle_auto(skilluse,skillmp, unit)
 										selectionmp = mp
 										skillSuccess = true
 										break
-									elseif(skilluse == "Any AoE Attack" and smartBattle_isAoE(text_reg)) then
+									elseif(skilluse == "AoE Attack" and smartBattle_isAoE(text_reg)) then
 										if(debug_mode) then runlog("Area Damage - Select this.", true) end
 										selection = text_reg:getLastMatch()
 										selectionmp = mp
 										skillSuccess = true
-									elseif(skilluse == "Any Single-Target Attack" and not smartBattle_isAoE(text_reg)) then
+									elseif(skilluse == "Non-AoE Attack" and not smartBattle_isAoE(text_reg)) then
 										if(debug_mode) then runlog("Single Target Damage - Select this.", true) end
 										selection = text_reg:getLastMatch()
 										selectionmp = mp
@@ -3467,6 +3490,7 @@ if(ALver >= "6.9.0") then
 	setButtonPosition(0,30*aRatio)
 else
 	toast("Old version of AnkuLua detected.")
+	toast("Some functions may not work properly.")
 end
 
 farmList = {}
@@ -3474,12 +3498,16 @@ chainoptions = {"Manual Select","All Ready Units" }
 ratio_options = {"High","Low"}
 
 dialogInit()
+newRow()
+addTextView("Version: "..currentVersion)
+newRow()
+if (ALver >= "6.8.0") then
+	addSeparator()
+end
+newRow()
 addTextView("")
 newRow()
-addTextView("Version: currentVersion")
-dialogInit()
-addTextView("")
-newRow()
+
 -- No longer necessary
 --[[
 for i,v in pairsByKeys(special_farm) do
@@ -3492,7 +3520,6 @@ for i,v in pairsByKeys(custom) do
 	farmList[#farmList+1] = v
 end
 
-
 --addTextView("Farm location:")
 --addSpinner("farmloc",farmList,"earth_shrine_entrance")
 --]]
@@ -3501,7 +3528,6 @@ addTextView("Select a function:")
 newRow()
 addRadioGroup("script_function", 1)
 addRadioButton("Arena Battle", 1)
-
 addRadioButton("Dungeon Farm", 2)
 addRadioButton("Exploration Farm", 3)
 addRadioButton("TMR Farm", 4)
@@ -3514,10 +3540,6 @@ addSpinner("chain_mode", chainoptions, chainoptions[1])
 --addRadioButton("\tAuto", 2)
 newRow()
 addTextView("")
-newRow()
---if (ALver >= "6.8.0") then
---	addSeparator()
---end
 newRow()
 addTextView("")
 newRow()
@@ -3891,7 +3913,7 @@ elseif(trace_mode == 3) then
 	setDragDropTiming(100,20)
 end
 
-if(debug_mode) then config_log:save("run.log") end
+if(debug_mode) then config_log:fsave("run.log") end
 if(dimscreen) then setBrightness(0) end --dim screen only on pro
 if(bonus_unit_menu) then use_bonus_unit = true end
 if(battle_mode == 2) then use_esper_battle = true end
