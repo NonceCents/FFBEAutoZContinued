@@ -29,11 +29,11 @@ NonceCents' TO DO LIST:
 -Try to take over the world
 --]]
 
-currentVersion = "20.0.4"
+currentVersion = "20.0.5"
 currentImageVersion = "2"
 
-patchNotes = "Features:\nAdded patch notes! You probably won't see these though :(\n\nBug Fixes: \nRepeat will now be pressed again if it's been clicked and units are still ready."
-patchNotes = patchNotes.."\nShortened names of auto-selected attack types to save screen space.\nImproved MP value reading in skill selection.\nFixed bug causing hang at some exploration boss battles."
+patchNotes = "Features:\nNo new features this patch! Will likely be adding Lasswell eventually for explorations if there is demand.\n\nBug Fixes: \nRepeat mode should now work more reliably.\n\n"
+patchNotes = patchNotes.."\nI am aware of issues with certain MPs not reading properly; no solutions have presented themselves.\n\nI am requesting image transparency support from the AnkuLua author to resolve the issue.\n\n"
 
 
 --Checks to see if user has AnkuLua's Network Functions enabled
@@ -2032,7 +2032,8 @@ function endTurn(forcebutton)
 		while (existsIsReady(bottom_reg,lagx/4)) do
 			existsClickL(repeatbtn,lagx/4)
 			wait(0.25+lagx*0.35)
-			while(existsClickIsReady(bottom_reg,lagx/4)) do wait(0.25+lagx*0.35) end
+			--while(existsClickIsReady(bottom_reg,lagx/4)) do wait(0.25+lagx*0.35) end --Depreciated in favor of Auto button for reliability
+			existsClickL(autobtn,lagx/4)
 		end
 		wait(lagx*0.5)
 		return true
