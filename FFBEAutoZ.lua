@@ -32,10 +32,6 @@ NonceCents' TO DO LIST:
 currentVersion = "20.0.5"
 currentImageVersion = "2"
 
-patchNotes = "Features:\nNo new features this patch! Will likely be adding Lasswell eventually for explorations if there is demand.\n\nBug Fixes: \nRepeat mode should now work more reliably.\n\n"
-patchNotes = patchNotes.."\nI am aware of issues with certain MPs not reading properly; no solutions have presented themselves.\n\nI am requesting image transparency support from the AnkuLua author to resolve the issue.\n\n"
-
-
 --Checks to see if user has AnkuLua's Network Functions enabled
 httpGetAvailable, httpGetResult = pcall(httpGet, "https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua")
 
@@ -54,7 +50,7 @@ if (httpGetAvailable) then
 
 	--- This checks the version number on github to see if an update is needed, then downloads the newest files ---
 	getNewestVersion = loadstring(httpGetResult)
-	latestVersion, latestImageVersion = getNewestVersion()
+	latestVersion, latestImageVersion, patchNotes = getNewestVersion()
 	--currentVersion = dofile(localPath .."version.lua")
 
 	if (currentVersion >= latestVersion) then
