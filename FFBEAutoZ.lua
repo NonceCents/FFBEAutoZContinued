@@ -29,49 +29,66 @@ NonceCents' TO DO LIST:
 -Try to take over the world
 --]]
 
-currentVersion = "20.0.5"
-currentImageVersion = "2"
+function updateScript(currentVersion, currentImageVersion)
+	--Checks to see if user has AnkuLua's Network Functions enabled
+	httpGetAvailable, httpGetResult = pcall(httpGet, "https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua")
 
---Checks to see if user has AnkuLua's Network Functions enabled
-httpGetAvailable, httpGetResult = pcall(httpGet, "https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua")
+	if (httpGetAvailable) then
 
-if (httpGetAvailable) then
-
-	toast("Network Functions enabled; checking for updates...")
-	--Following update code provided by seebadoris.
-	--Originally written by Paladiex: https://github.com/Paladiex
-	--Used with permission.
-
-	localPath = scriptPath()
-	imagePath = (localPath .. "image/")
-
-	--Don't need this currently.
-	--commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
-
-	--- This checks the version number on github to see if an update is needed, then downloads the newest files ---
-	getNewestVersion = loadstring(httpGetResult)
-	latestVersion, latestImageVersion, patchNotes = getNewestVersion()
-	--currentVersion = dofile(localPath .."version.lua")
-
-	if (currentVersion >= latestVersion) then
-		toast ("You are running the most current version!")
-	else
-		httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
-		toast ("Updating to version "..latestVersion)
-		print ("Updated from version "..currentVersion.." to version "..latestVersion)
-		print ("\n"..patchNotes.."\n")
-		if ((currentImageVersion < latestImageVersion)) then
-			httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
-			toast ("Update requires re-download of image directory. Stand by...")
-			dofile(localPath .."imageupdater.lua")
-			--httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
+		if(force_update) then
+			toast("Network Functions enabled; repairing files...")
+		else
+			toast("Network Functions enabled; checking for updates...")
 		end
-		scriptExit("Update Complete!")
+		--Following update code provided by seebadoris.
+		--Originally written by Paladiex: https://github.com/Paladiex
+		--Used with permission.
+
+		localPath = scriptPath()
+		imagePath = (localPath .. "image/")
+
+		--Don't need this currently.
+		--commonLib = loadstring(httpGet("https://raw.githubusercontent.com/AnkuLua/commonLib/master/commonLib.lua"))()
+
+		--- This checks the version number on github to see if an update is needed, then downloads the newest files ---
+		getNewestVersion = loadstring(httpGetResult)
+		latestVersion, latestImageVersion, patchNotes = getNewestVersion()
+		--currentVersion = dofile(localPath .."version.lua")
+
+		if (currentVersion >= latestVersion and force_update ~= true) then
+			toast ("You are running the most current version!")
+		else
+			httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/FFBEAutoZ.lua", localPath .."FFBEAutoZ.lua")
+			if(force_update) then
+				toast ("Repairing version "..latestVersion)
+				print ("Repaired version "..currentVersion.." to version "..latestVersion)
+			else
+				toast ("Updating to version "..latestVersion)
+				print ("Updated from version "..currentVersion.." to version "..latestVersion)
+			end
+			print ("\n"..patchNotes.."\n")
+			if ((currentImageVersion < latestImageVersion or force_update == true)) then
+				httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/imageupdater.lua", localPath .."imageupdater.lua")
+				if(force_update) then
+					toast("Repair will redownload image directory. Stand by...")
+				else
+					toast ("Update requires re-download of image directory. Stand by...")
+				end
+				dofile(localPath .."imageupdater.lua")
+				--httpDownload("https://raw.githubusercontent.com/NonceCents/FFBEAutoZContinued/master/version.lua", localPath .."version.lua")
+			end
+			scriptExit("Press OK to exit, run script again to load new version.")
+		end
+	else
+		toast("Unable to check for updates.")
+		toast("Enable Network Functions in AnkuLua settings to allow update checks.")
 	end
-else
-	toast("Unable to check for updates.")
-	toast("Enable Network Functions in AnkuLua settings to allow update checks.")
 end
+
+currentVersion = "20.0.6"
+currentImageVersion = "2"
+force_update = false
+updateScript(currentVersion, currentImageVersion)
 
 ALver = "0"															-- AnkuLua version string
 ALpro = true														-- is this AnkuLua a Pro and not trial?
@@ -1507,13 +1524,11 @@ function arena()
 		connectionCheckNoWait()
 		existsClickL(arena_begin)
 	end
-	if (use_repeat_battle) then
-		endTurn("repeatbtn")
-	else
-		smartBattle_arena()
-	end
+
+	if (not use_repeat_battle) then smartBattle_arena() end
 	
 	while(true) do
+		if (use_repeat_battle) then endTurn("repeatbtn") end
 		usePreviousSnap(false)
 		connectionCheckNoWait()
 		usePreviousSnap(true)
@@ -2024,12 +2039,23 @@ function endTurn(forcebutton)
 	elseif((forcebutton == "repeatbtn" or (forcebutton == nil and use_repeat_battle)) and existsClickL(repeatbtn,lagx/4)) then
 		if(debug_mode) then runlog("Repeat : ") end
 		--wait(lagx/4)
-		--while (existsClick(IsReady,lagx*0.75)) do wait(0.25+lagx*0.35) end --Old version
+		--while (existsClick(IsReady,lagx*0.75)) do wait(0.25+lagx*0.35) end
+		-- Old version
 		while (existsIsReady(bottom_reg,lagx/4)) do
 			existsClickL(repeatbtn,lagx/4)
-			wait(0.25+lagx*0.35)
-			--while(existsClickIsReady(bottom_reg,lagx/4)) do wait(0.25+lagx*0.35) end --Depreciated in favor of Auto button for reliability
+			wait(lagx/4)
+			--while(existsClickIsReady(bottom_reg,lagx/4)) do wait(0.25+lagx*0.35) end
+			-- Depreciated in favor of Auto button for reliability
 			existsClickL(autobtn,lagx/4)
+			wait(lagx/4)
+			while(existsL(autoonbtn,lagx) or not existsL(autobtn,lagx)) do
+				if(existsClickL(autoonbtn,lagx)) then return true
+				elseif(existsClickL(BackButton, 0)) then
+					runlog("Exists Click Back",true,debug.getinfo(1).currentline)
+					wait(lagx/4)
+				elseif(not existsL(menuinbattle, 0)) then return false
+				end
+			end
 		end
 		wait(lagx*0.5)
 		return true
@@ -2038,7 +2064,7 @@ function endTurn(forcebutton)
 	elseif((forcebutton == "autobtn" or (forcebutton == nil and not use_repeat_battle)) and existsClickL(autobtn,lagx/4)) then
 		if(debug_mode) then runlog("Auto : ") end
 		wait(lagx/4)
-		while(not existsL(autobtn,lagx)) do
+		while(existsL(autoonbtn,lagx) or not existsL(autobtn,lagx)) do
 			if(existsClickL(autoonbtn,lagx)) then return true
 			elseif(existsClickL(BackButton, 0)) then
 				runlog("Exists Click Back",true,debug.getinfo(1).currentline)
@@ -3494,6 +3520,7 @@ farmList = {}
 chainoptions = {"Manual Select","All Ready Units" }
 ratio_options = {"High","Low"}
 
+removePreference("force_update")
 dialogInit()
 newRow()
 addTextView("Version: "..currentVersion)
@@ -3579,6 +3606,8 @@ newRow()
 --newRow()
 addCheckBox("help_screen", "Show help?", false)
 --addCheckBox("update_check", "Update upon next start if a newer version available?", false)
+newRow()
+addCheckBox("force_update", "Repair Script and Image Files", false)
 
 dialogShow("FFBEAutoZ")
 
@@ -3586,6 +3615,8 @@ if (help_screen) then
 	helpscreen()
 	scriptExit("Help Finished")
 end
+
+if (force_update == true) then updateScript(currentVersion, currentImageVersion) end
 
 --Displays Arena Battle Options
 if(script_function == 1) then
