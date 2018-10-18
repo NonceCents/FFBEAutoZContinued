@@ -1,4 +1,7 @@
 # FFBEAutoZContinued
+
+UPDATE - DEVELOPMENT ON THIS HAS HALTED AS I NO LONGER PLAY THE GAME. FEEL FREE TO FORK THIS PROJECT!
+
 http://ankulua.boards.net/thread/589/ffbeauto-continued-farming-chaining-arena
 
 Final Fantasy Brave Exvius: ffbeAuto -  Farming & Exploration
